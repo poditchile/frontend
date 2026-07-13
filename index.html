@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PODIT Laser and 3D Maps — Maquetas de terreno para corte láser e impresión 3D</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F4EE;
+    --panel:#FFFFFF;
+    --ink:#2A2822;
+    --ink-soft:#6B6759;
+    --line:#DEDACB;
+    --accent:#C1553A;
+    --accent-soft:#EADFCE;
+    --ok:#5B7A5E;
+    --radius:2px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:'Inter',sans-serif;color:var(--ink);background:var(--paper);}
+  #appView{display:flex;flex-direction:column;height:100%;}
+
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--paper);}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand svg{width:26px;height:26px;}
+  .brand-name{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.15rem;letter-spacing:-0.01em;}
+  .brand-tag{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--ink-soft);letter-spacing:0.04em;text-transform:uppercase;margin-left:4px;padding-left:10px;border-left:1px solid var(--line);}
+  .plan-pill{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-soft);border:1px solid var(--line);padding:4px 10px;border-radius:20px;}
+
+  .layout{flex:1;display:flex;min-height:0;}
+  #map{position:absolute;inset:0;background:#EFEBDF;}
+  .leaflet-container{font-family:'Inter',sans-serif;}
+
+  aside{width:380px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;}
+
+  .tabs{display:flex;border-bottom:1px solid var(--line);flex-shrink:0;}
+  .tab-btn{
+    flex:1;padding:13px 8px;background:var(--panel);border:none;cursor:pointer;
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.82rem;color:var(--ink-soft);
+    border-bottom:2px solid transparent;
+  }
+  .tab-btn.active{color:var(--ink);border-bottom-color:var(--accent);}
+  .tab-panel{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;}
+
+  .side-section{padding:20px 22px;border-bottom:1px solid var(--line);}
+  .side-section:last-child{border-bottom:none;}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);margin:0 0 6px;}
+  h2{font-family:'Space Grotesk',sans-serif;font-size:1rem;margin:0 0 4px;font-weight:600;}
+  .hint{font-size:0.8rem;color:var(--ink-soft);line-height:1.4;margin:0;}
+
+  .field{margin-top:14px;}
+  .field label{display:block;font-size:0.76rem;color:var(--ink-soft);margin-bottom:5px;font-weight:500;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  select,input[type=number],input[type=text],input[type=password]{
+    width:100%;padding:8px 9px;border:1px solid var(--line);border-radius:var(--radius);
+    font-family:'IBM Plex Mono',monospace;font-size:0.82rem;background:var(--paper);color:var(--ink);
+  }
+  select:focus,input:focus{outline:none;border-color:var(--accent);}
+
+  .mode-toggle{display:flex;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-top:6px;}
+  .mode-toggle button{flex:1;padding:8px 6px;background:var(--paper);border:none;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:0.74rem;color:var(--ink-soft);border-right:1px solid var(--line);}
+  .mode-toggle button:last-child{border-right:none;}
+  .mode-toggle button.active{background:var(--accent);color:#fff;}
+
+  .bbox-readout{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-soft);display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-top:10px;padding:10px;background:var(--paper);border:1px dashed var(--line);border-radius:var(--radius);}
+  .bbox-readout b{color:var(--ink);font-weight:500;}
+
+  .cta{
+    width:100%;margin-top:6px;padding:12px;border:none;border-radius:var(--radius);
+    background:var(--accent);color:#fff;font-family:'Space Grotesk',sans-serif;font-weight:600;
+    font-size:0.92rem;cursor:pointer;letter-spacing:0.01em;transition:opacity .15s;
+    display:flex;align-items:center;justify-content:center;gap:9px;
+  }
+  .cta:disabled{opacity:0.45;cursor:not-allowed;}
+  .cta:not(:disabled):hover{opacity:0.9;}
+  .btn-spinner{width:15px;height:15px;flex-shrink:0;animation:spin 0.8s linear infinite;display:none;}
+  .cta.loading .btn-spinner{display:block;}
+
+  .ghost-btn{width:100%;padding:9px;background:transparent;color:var(--ink-soft);border:1px solid var(--line);border-radius:var(--radius);font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.8rem;cursor:pointer;margin-top:8px;}
+
+  .empty-panel{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:12px;padding:30px 24px;}
+  .empty-panel svg{width:100px;height:100px;}
+  .empty-title{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.95rem;}
+  .empty-sub{font-size:0.8rem;color:var(--ink-soft);line-height:1.4;max-width:26ch;}
+
+  .error-box{color:var(--accent);font-size:0.8rem;font-family:'IBM Plex Mono',monospace;margin-top:10px;padding:10px;border:1px solid var(--accent);border-radius:var(--radius);background:#FBF0EC;}
+
+  .spinner{animation:spin 1.6s linear infinite;transform-origin:center;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .draw-hint{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:7px 14px;border-radius:20px;font-family:'IBM Plex Mono',monospace;font-size:0.74rem;color:var(--ink-soft);box-shadow:0 2px 8px rgba(0,0,0,0.06);z-index:1000;pointer-events:none;}
+
+  /* ---------- Distribución tab ---------- */
+  .layout-summary{padding:16px 22px;border-bottom:1px solid var(--line);}
+  .summary-list{width:100%;font-family:'IBM Plex Mono',monospace;font-size:0.74rem;}
+  .summary-list div{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);}
+  .summary-list span:last-child{color:var(--ink);font-weight:500;}
+  .download-btn{width:100%;padding:11px;background:var(--ok);color:#fff;border:none;border-radius:var(--radius);font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.88rem;cursor:pointer;margin-top:12px;}
+  .download-btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+  .sheet-card{padding:14px 22px;border-bottom:1px solid var(--line);}
+  .sheet-card-title{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-soft);margin-bottom:6px;display:flex;justify-content:space-between;}
+  .sheet-svg-wrap{border:1px solid var(--line);background:var(--paper);border-radius:var(--radius);}
+  .sheet-svg-wrap svg{display:block;width:100%;height:auto;}
+  .part-shape{fill:var(--accent-soft);stroke:var(--ink);stroke-width:1.4;fill-rule:evenodd;}
+  .part-shape.fragment{fill:#F0DCCF;}
+  .part-label{font-family:'IBM Plex Mono',monospace;font-size:7px;fill:var(--ink-soft);}
+
+  /* ---------- Landing page ---------- */
+  #landingView{background:var(--paper);min-height:100%;overflow-y:auto;}
+  .land-nav{display:flex;align-items:center;justify-content:space-between;padding:18px 40px;border-bottom:1px solid var(--line);}
+  .land-nav-links{display:flex;align-items:center;gap:22px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.86rem;}
+  .land-nav-links a{color:var(--ink);text-decoration:none;}
+  .land-nav-links a:hover{color:var(--accent);}
+  .land-nav-btn{width:auto !important;}
+
+  .hero{display:flex;align-items:center;gap:60px;padding:80px 60px;max-width:1180px;margin:0 auto;}
+  .hero-copy{flex:1;min-width:0;}
+  .hero-copy h1{font-family:'Space Grotesk',sans-serif;font-size:2.6rem;line-height:1.1;font-weight:700;margin:10px 0 18px;letter-spacing:-0.01em;}
+  .hero-sub{font-size:1.02rem;color:var(--ink-soft);line-height:1.55;max-width:46ch;margin:0 0 28px;}
+  .hero-ctas{display:flex;gap:14px;flex-wrap:wrap;}
+  .hero-art{flex-shrink:0;width:400px;border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 8px 30px rgba(42,40,34,0.08);}
+  .hero-art img{width:100%;height:auto;display:block;}
+
+  .trust-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:26px;font-family:'IBM Plex Mono',monospace;font-size:0.76rem;color:var(--ink-soft);}
+  .trust-bar b{color:var(--ink);}
+  .trust-dot{color:var(--line);}
+
+  .features{padding:60px 40px 20px;max-width:1180px;margin:0 auto;}
+  .features-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;}
+  .feature-card{padding:22px 20px;}
+  .feature-card svg{width:40px;height:40px;margin-bottom:14px;}
+  .feature-card h3{font-family:'Space Grotesk',sans-serif;font-size:0.98rem;margin:0 0 8px;}
+  .feature-card p{font-size:0.83rem;color:var(--ink-soft);line-height:1.5;margin:0;}
+
+  .steps-grid-4{grid-template-columns:repeat(4,1fr);}
+
+  .pricing{padding:70px 40px 90px;max-width:820px;margin:0 auto;}
+  .pricing-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  .price-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:28px 26px;position:relative;}
+  .price-card-featured{border-color:var(--accent);box-shadow:0 8px 24px rgba(193,85,58,0.12);}
+  .price-badge{position:absolute;top:-11px;right:20px;background:var(--accent);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:0.66rem;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.04em;}
+  .price-card h3{font-family:'Space Grotesk',sans-serif;font-size:1.05rem;margin:0 0 6px;}
+  .price-card .price{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;margin:0 0 4px;}
+  .price-card .price span{font-size:0.9rem;font-weight:400;color:var(--ink-soft);}
+  .price-card ul{list-style:none;padding:0;margin:16px 0 20px;font-size:0.84rem;color:var(--ink-soft);}
+  .price-card ul li{padding:5px 0;border-bottom:1px solid var(--line);}
+  .price-card ul li::before{content:"— ";}
+
+  @media (max-width:900px){
+    .features-grid{grid-template-columns:repeat(2,1fr);}
+    .steps-grid-4{grid-template-columns:repeat(2,1fr);}
+    .pricing-grid{grid-template-columns:1fr;}
+  }
+
+  .howitworks{padding:70px 40px 90px;max-width:1100px;margin:0 auto;}
+  .section-title{font-family:'Space Grotesk',sans-serif;font-size:1.7rem;font-weight:700;text-align:center;margin:6px 0 46px;}
+  .steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;}
+  .step-card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:26px 22px;text-align:left;}
+  .step-card svg{width:44px;height:44px;margin-bottom:14px;}
+  .step-card h3{font-family:'Space Grotesk',sans-serif;font-size:1.02rem;margin:0 0 8px;}
+  .step-card p{font-size:0.86rem;color:var(--ink-soft);line-height:1.5;margin:0;}
+
+  .land-footer{display:flex;justify-content:space-between;padding:22px 40px;border-top:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-soft);}
+
+  @media (max-width:820px){
+    .hero{flex-direction:column;padding:50px 24px;}
+    .hero-art{width:100%;max-width:340px;}
+    .steps-grid{grid-template-columns:1fr;}
+  }
+
+  /* ---------- Map drawing toolbar ---------- */
+  .draw-toolbar{
+    position:absolute;top:14px;left:14px;z-index:1000;
+    background:var(--panel);border:1px solid var(--line);border-radius:6px;
+    display:flex;flex-direction:column;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);
+  }
+  .draw-tool-btn{
+    width:38px;height:38px;border:none;background:var(--panel);cursor:pointer;
+    font-size:1.05rem;color:var(--ink-soft);border-bottom:1px solid var(--line);
+  }
+  .draw-tool-btn:last-child{border-bottom:none;}
+  .draw-tool-btn.active{background:var(--accent);color:#fff;}
+
+  .checkbox-field label{display:flex;align-items:center;gap:8px;font-size:0.82rem;color:var(--ink);cursor:pointer;font-weight:500;}
+  .checkbox-field input{width:auto;}
+
+  /* ---------- Account menu ---------- */
+  .account-menu{
+    position:absolute;top:calc(100% + 8px);right:0;z-index:1200;
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:14px;width:230px;box-shadow:0 8px 24px rgba(42,40,34,0.12);
+    text-align:left;
+  }
+  .account-menu-email{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.86rem;word-break:break-all;}
+  .account-menu-plan{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-soft);margin-top:2px;}
+
+  /* ---------- Modal (auth) ---------- */
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(42,40,34,0.45);z-index:2000;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .modal-card{
+    background:var(--panel);border-radius:10px;padding:26px 24px;width:340px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.25);
+  }
+
+  /* ---------- Projects list ---------- */
+  .project-card{
+    border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin-bottom:10px;
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+  }
+  .project-card-name{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.86rem;}
+  .project-card-meta{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--ink-soft);}
+  .project-card-actions{display:flex;gap:6px;flex-shrink:0;}
+  .project-card-actions button{
+    padding:6px 10px;font-size:0.72rem;border-radius:4px;border:1px solid var(--line);
+    background:var(--paper);cursor:pointer;font-family:'Space Grotesk',sans-serif;font-weight:600;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== LANDING ===================== -->
+<div id="landingView">
+  <nav class="land-nav">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 3 L27 10 L16 17 L5 10 Z" stroke="#2A2822" stroke-width="1.4"/>
+        <path d="M16 12 L23 16.4 L16 20.8 L9 16.4 Z" stroke="#C1553A" stroke-width="1.4"/>
+        <path d="M16 20 L20 22.4 L16 24.8 L12 22.4 Z" stroke="#2A2822" stroke-width="1.4"/>
+      </svg>
+      <span class="brand-name">PODIT Laser and 3D Maps</span>
+    </div>
+    <div class="land-nav-links">
+      <a href="#features">Qué incluye</a>
+      <a href="#howitworks">Cómo funciona</a>
+      <a href="#pricing">Precios</a>
+      <button class="ghost-btn land-nav-btn" id="loginBtn">Iniciar sesión</button>
+      <button class="cta land-nav-btn" id="signupBtn" style="margin:0;width:auto;padding:10px 18px;">Registrarse</button>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">terreno real → listo para cortar o imprimir</p>
+      <h1>De cualquier lugar del mapa a una maqueta física, en minutos.</h1>
+      <p class="hero-sub">PODIT Laser and 3D Maps descarga la elevación real de tu sitio -- con sus calles y edificios -- y arma el modelo por ti: planchas DXF numeradas para corte láser, o un STL listo para tu impresora 3D.</p>
+      <div class="hero-ctas">
+        <button class="cta" id="heroStartBtn" style="width:auto;padding:14px 26px;">Empezar gratis</button>
+        <a href="#howitworks" class="ghost-btn" style="width:auto;padding:14px 22px;display:inline-flex;align-items:center;">Ver cómo funciona</a>
+      </div>
+      <div class="trust-bar">
+        <span>Un producto de <b>PODIT</b></span>
+        <span class="trust-dot">·</span>
+        <span>Impresión 3D</span>
+        <span class="trust-dot">·</span>
+        <span>Corte láser</span>
+        <span class="trust-dot">·</span>
+        <span>Ploteo</span>
+      </div>
+    </div>
+    <div class="hero-art">
+      <img src="https://d8j0ntlcm91z4.cloudfront.net/user_37UatfIrjtLoeIuxEqWPbFesMh3/hf_20260712_040642_d00120e5-0836-45c0-9b3a-60c468b2c030.png" alt="Maqueta topográfica cortada en láser, capas de madera apiladas" style="width:100%;height:auto;border-radius:8px;display:block;">
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <p class="eyebrow" style="text-align:center;">Qué incluye</p>
+    <h2 class="section-title">Todo lo que hace falta para pasar del mapa a la mesa de trabajo</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <svg viewBox="0 0 48 48" fill="none"><path d="M24 6 L40 15 L24 24 L8 15 Z" stroke="#C1553A" stroke-width="1.8"/><path d="M24 17 L34 22.6 L24 28 L14 22.6 Z" stroke="#2A2822" stroke-width="1.6"/><path d="M24 26 L30 29.2 L24 32 L18 29.2 Z" stroke="#2A2822" stroke-width="1.6"/></svg>
+        <h3>Topografía real</h3>
+        <p>Elevación real del terreno (Mapbox Terrain-RGB), no una aproximación -- curvas de nivel suaves cada tantos metros, a la escala que definas.</p>
+      </div>
+      <div class="feature-card">
+        <svg viewBox="0 0 48 48" fill="none"><path d="M8 38 L40 10" stroke="#2A2822" stroke-width="2" stroke-dasharray="4 3"/><rect x="26" y="14" width="12" height="12" fill="#EADFCE" stroke="#2A2822" stroke-width="1.6"/><rect x="10" y="26" width="9" height="9" fill="#F0DCCF" stroke="#2A2822" stroke-width="1.6"/></svg>
+        <h3>Calles y edificios</h3>
+        <p>Trae nombres de calles y alturas de edificios desde OpenStreetMap, y agrega a mano los que falten con su altura real.</p>
+      </div>
+      <div class="feature-card">
+        <svg viewBox="0 0 48 48" fill="none"><rect x="8" y="8" width="32" height="22" rx="1" stroke="#DEDACB" stroke-width="2"/><path d="M14 26 L22 14 L27 20 L34 12" stroke="#C1553A" stroke-width="1.8" stroke-dasharray="3 3"/><rect x="6" y="34" width="36" height="4" fill="#2A2822"/></svg>
+        <h3>Corte láser (DXF)</h3>
+        <p>Planchas numeradas y anidadas, con costuras y guías de ensamble cuando una pieza no cabe entera en tu plancha.</p>
+      </div>
+      <div class="feature-card">
+        <svg viewBox="0 0 48 48" fill="none"><path d="M24 8 L38 16 L38 32 L24 40 L10 32 L10 16 Z" stroke="#2A2822" stroke-width="1.8" fill="none"/><path d="M24 8 L24 24 L38 32 M24 24 L10 32" stroke="#C1553A" stroke-width="1.6"/></svg>
+        <h3>Impresión 3D (STL)</h3>
+        <p>Malla real a escala, calles extruidas y edificios con su altura -- lista para tu slicer, con el tamaño de tu cama ya considerado.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="howitworks" id="howitworks">
+    <p class="eyebrow" style="text-align:center;">Cómo funciona</p>
+    <h2 class="section-title">Cuatro pasos, un archivo listo para fabricar</h2>
+    <div class="steps-grid steps-grid-4">
+      <div class="step-card">
+        <svg viewBox="0 0 60 60" fill="none"><rect x="10" y="10" width="40" height="30" rx="1" stroke="#DEDACB" stroke-width="2"/><path d="M18 34 L28 20 L34 28 L42 16" stroke="#C1553A" stroke-width="2" stroke-dasharray="3 3"/></svg>
+        <h3>1. Dibuja tu sitio</h3>
+        <p>Rectángulo, círculo o un polígono a mano -- lo que sea más cómodo para tu terreno.</p>
+      </div>
+      <div class="step-card">
+        <svg viewBox="0 0 60 60" fill="none"><rect x="12" y="20" width="10" height="20" fill="#EADFCE" stroke="#2A2822" stroke-width="1.6"/><rect x="26" y="14" width="10" height="26" fill="#F0DCCF" stroke="#2A2822" stroke-width="1.6"/><rect x="40" y="24" width="8" height="16" fill="#EADFCE" stroke="#2A2822" stroke-width="1.6"/></svg>
+        <h3>2. Completa edificios</h3>
+        <p>Marca calles/edificios de OSM, o agrega a mano los que falten con su altura.</p>
+      </div>
+      <div class="step-card">
+        <svg viewBox="0 0 60 60" fill="none"><rect x="14" y="14" width="14" height="32" rx="1" fill="#EADFCE" stroke="#2A2822" stroke-width="1.6"/><rect x="32" y="22" width="14" height="24" rx="1" fill="#F0DCCF" stroke="#2A2822" stroke-width="1.6"/></svg>
+        <h3>3. Escala y salida</h3>
+        <p>Elige la escala, el tamaño de plancha/cama, y si quieres DXF o STL.</p>
+      </div>
+      <div class="step-card">
+        <svg viewBox="0 0 60 60" fill="none"><path d="M18 40 L18 20 L30 12 L42 20 L42 40 Z" stroke="#2A2822" stroke-width="1.8" fill="none"/><path d="M18 20 L42 20 M18 30 L42 30" stroke="#C1553A" stroke-width="1.6"/></svg>
+        <h3>4. Descarga y fabrica</h3>
+        <p>Planchas DXF numeradas, o tu STL -- listo para el láser o la impresora.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="pricing" id="pricing">
+    <p class="eyebrow" style="text-align:center;">Precios</p>
+    <h2 class="section-title">Empieza gratis, crece cuando lo necesites</h2>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <h3>Gratis</h3>
+        <p class="price">$0<span>/mes</span></p>
+        <p class="hint">Para probar y proyectos chicos.</p>
+        <ul>
+          <li>2 modelos por mes</li>
+          <li>DXF y STL</li>
+          <li>Calles y edificios de OSM</li>
+        </ul>
+        <button class="ghost-btn" style="width:100%;" id="pricingFreeBtn">Empezar gratis</button>
+      </div>
+      <div class="price-card price-card-featured">
+        <p class="price-badge">Más elegido</p>
+        <h3>PODIT Pro</h3>
+        <p class="price">$3<span>USD/mes</span></p>
+        <p class="hint">Para uso frecuente y sitios más grandes.</p>
+        <ul>
+          <li>Modelos ilimitados</li>
+          <li>Sitios de mayor tamaño</li>
+          <li>Soporte prioritario</li>
+        </ul>
+        <button class="cta" style="width:100%;" id="pricingProBtn">Empezar prueba</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="land-footer">
+    <span>© 2026 PODIT — Impresión 3D, corte láser y ploteo</span>
+    <span>Datos de elevación: Mapbox Terrain-RGB · Calles y edificios: OpenStreetMap</span>
+  </footer>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="appView" style="display:none;">
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 3 L27 10 L16 17 L5 10 Z" stroke="#2A2822" stroke-width="1.4"/>
+      <path d="M16 12 L23 16.4 L16 20.8 L9 16.4 Z" stroke="#C1553A" stroke-width="1.4"/>
+      <path d="M16 20 L20 22.4 L16 24.8 L12 22.4 Z" stroke="#2A2822" stroke-width="1.4"/>
+    </svg>
+    <span class="brand-name">PODIT Laser and 3D Maps</span>
+    <span class="brand-tag">by PODIT</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button class="ghost-btn" id="backToLandingBtn" style="width:auto;padding:7px 14px;margin:0;">← Inicio</button>
+    <div style="position:relative;">
+      <button class="plan-pill" id="accountBadge" style="cursor:pointer;border:1px solid var(--line);background:var(--panel);">Cargando…</button>
+      <div id="accountMenu" class="account-menu" style="display:none;">
+        <div class="account-menu-email" id="accountMenuEmail">—</div>
+        <div class="account-menu-plan" id="accountMenuPlan">—</div>
+        <button class="ghost-btn" id="upgradeBtn" style="width:100%;margin-top:8px;">Actualizar a PODIT Pro</button>
+        <button class="ghost-btn" id="manageSubBtn" style="width:100%;margin-top:8px;display:none;">Gestionar suscripción</button>
+        <button class="ghost-btn" id="logoutBtn" style="width:100%;margin-top:8px;">Cerrar sesión</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <div style="position:relative;flex:1;min-width:0;">
+    <div id="map"></div>
+    <div class="draw-toolbar" id="drawToolbar">
+      <button type="button" class="draw-tool-btn active" data-shape="rectangle" title="Rectángulo">▭</button>
+      <button type="button" class="draw-tool-btn" data-shape="circle" title="Círculo">◯</button>
+      <button type="button" class="draw-tool-btn" data-shape="polygon" title="Polígono">⬠</button>
+      <button type="button" class="draw-tool-btn" data-shape="building" title="Agregar edificio (altura manual)">🏢</button>
+    </div>
+    <div class="draw-hint" id="drawHint">Dibuja un rectángulo sobre el sitio que quieres modelar</div>
+  </div>
+
+  <aside>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="params" id="tabBtnParams">Parámetros</button>
+      <button class="tab-btn" data-tab="projects" id="tabBtnProjects">Mis proyectos</button>
+      <button class="tab-btn" data-tab="iso" id="tabBtnIso">Vista isométrica</button>
+      <button class="tab-btn" data-tab="layout" id="tabBtnLayout">Planchas</button>
+    </div>
+
+    <!-- ===================== TAB: MIS PROYECTOS ===================== -->
+    <div class="tab-panel" id="tabProjects" style="display:none;">
+      <div class="side-section">
+        <p class="eyebrow">Proyectos guardados</p>
+        <h2>Mis proyectos</h2>
+        <p class="hint">Guarda los parámetros del sitio actual para volver a generarlo después.</p>
+        <button type="button" class="ghost-btn" id="saveProjectBtn" style="margin-top:10px;">💾 Guardar proyecto actual</button>
+      </div>
+      <div class="side-section" id="projectsListSection">
+        <div id="projectsList" class="hint">Cargando…</div>
+      </div>
+    </div>
+
+    <!-- ===================== TAB: ISOMÉTRICA ===================== -->
+    <div class="tab-panel" id="tabIso" style="display:none;">
+      <div class="empty-panel" id="isoEmpty">
+        <svg viewBox="0 0 100 100" fill="none">
+          <path d="M50 20 L80 36 L50 52 L20 36 Z" stroke="#DEDACB" stroke-width="2"/>
+          <path d="M50 44 L74 57 L50 70 L26 57 Z" stroke="#C1553A" stroke-width="1.6" stroke-dasharray="3 3"/>
+          <path d="M50 62 L68 72 L50 82 L32 72 Z" stroke="#DEDACB" stroke-width="1.6"/>
+        </svg>
+        <div class="empty-title">Aún no hay vista isométrica</div>
+        <div class="empty-sub">Genera un modelo para ver aquí cómo queda el terreno armado, capa por capa.</div>
+      </div>
+      <div id="isoContent" style="display:none;padding:18px;"></div>
+    </div>
+
+    <!-- ===================== TAB: PARÁMETROS ===================== -->
+    <div class="tab-panel" id="tabParams">
+      <div class="side-section">
+        <p class="eyebrow">01 — Sitio</p>
+        <h2>Selección del área</h2>
+        <p class="hint">Dibuja el terreno con rectángulo/círculo/polígono, y agrega edificios con altura manual con la herramienta 🏢 si OpenStreetMap no los tiene.</p>
+        <div class="bbox-readout" id="bboxReadout">
+          <div>Sur <b id="rSouth">—</b></div>
+          <div>Norte <b id="rNorth">—</b></div>
+          <div>Oeste <b id="rWest">—</b></div>
+          <div>Este <b id="rEast">—</b></div>
+          <div style="grid-column:1/-1;">Tamaño aprox. <b id="rSize">—</b></div>
+        </div>
+        <button type="button" class="ghost-btn" id="redrawBtn">Redibujar área</button>
+      </div>
+
+      <div class="side-section">
+        <p class="eyebrow">02 — Calles y edificios</p>
+        <h2>Datos de OpenStreetMap</h2>
+        <div class="field checkbox-field">
+          <label><input type="checkbox" id="includeStreets"> Incluir calles con nombre</label>
+        </div>
+        <div class="field checkbox-field">
+          <label><input type="checkbox" id="includeBuildings"> Incluir edificios de OSM</label>
+        </div>
+        <p class="hint">Se graban en todas las capas (según lo que se ve en cada una); la placa base además muestra la referencia completa. En STL se extruyen en 3D.</p>
+
+        <div class="field row2">
+          <div>
+            <label for="defaultBuildingHeightM">Altura por defecto si OSM no la tiene (m)</label>
+            <input type="number" id="defaultBuildingHeightM" value="6" min="1" step="0.5">
+          </div>
+          <div>
+            <label for="labelTextHeightM">Altura de letra en calles (m reales)</label>
+            <input type="number" id="labelTextHeightM" value="2" min="0.5" step="0.5">
+          </div>
+        </div>
+
+        <div id="stlStreetFields" style="display:none;">
+          <div class="field row2">
+            <div>
+              <label for="streetWidthM">Ancho de calle (m)</label>
+              <input type="number" id="streetWidthM" value="6" min="0.5" step="0.5">
+            </div>
+            <div>
+              <label for="streetRaiseMm">Extrusión hacia arriba (mm)</label>
+              <input type="number" id="streetRaiseMm" value="0.8" min="0.1" step="0.1">
+            </div>
+          </div>
+        </div>
+
+        <p class="hint" id="manualBuildingsHint" style="margin-top:8px;">Edificios agregados a mano: <b id="manualBuildingsCount">0</b></p>
+      </div>
+
+      <div class="side-section">
+        <p class="eyebrow">03 — Escala y salida</p>
+        <h2>Parámetros de fabricación</h2>
+
+        <div class="field">
+          <label for="scale">Escala del modelo</label>
+          <select id="scale">
+            <option value="100">1:100</option>
+            <option value="150">1:150</option>
+            <option value="200" selected>1:200</option>
+            <option value="500">1:500</option>
+            <option value="1000">1:1000</option>
+            <option value="2000">1:2000</option>
+            <option value="5000">1:5000</option>
+            <option value="custom">Personalizado…</option>
+          </select>
+          <input type="number" id="scaleCustom" placeholder="Ej: 350" min="1" step="1" style="margin-top:6px;display:none;">
+        </div>
+
+        <div class="field">
+          <label>Formato de salida</label>
+          <div class="mode-toggle">
+            <button type="button" data-format="dxf" id="formatDxf" class="active">DXF · corte láser</button>
+            <button type="button" data-format="stl" id="formatStl">STL · impresión 3D</button>
+          </div>
+        </div>
+
+        <div class="field row2">
+          <div>
+            <label for="sheetW" id="sheetWLabel">Ancho plancha (mm)</label>
+            <input type="number" id="sheetW" value="600" min="100" step="10">
+          </div>
+          <div>
+            <label for="sheetH" id="sheetHLabel">Largo plancha (mm)</label>
+            <input type="number" id="sheetH" value="400" min="100" step="10">
+          </div>
+        </div>
+        <p class="hint" id="plateHint">Tamaño de la plancha láser. (Para STL, este mismo campo es el tamaño de la cama de impresión 3D, ej. 220x220mm.)</p>
+
+        <div class="field" id="thicknessField">
+          <label for="thickness">Grosor del material (mm)</label>
+          <select id="thickness">
+            <option value="1">1 mm</option>
+            <option value="1.5">1.5 mm</option>
+            <option value="2">2 mm</option>
+            <option value="3" selected>3 mm</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="side-section">
+        <p class="eyebrow">04 — Datos de elevación</p>
+        <h2>Mapbox access token</h2>
+        <p class="hint">Se usa para descargar la elevación real del terreno (Terrain-RGB). Se guarda solo en tu navegador.</p>
+        <div class="field" style="margin-top:10px;">
+          <input type="password" id="mapboxToken" placeholder="pk.eyJ1Ijoi...">
+        </div>
+      </div>
+
+      <div class="side-section" style="flex:0;">
+        <button class="cta" id="generateBtn" disabled>
+          <svg class="btn-spinner" viewBox="0 0 50 50" fill="none">
+            <circle cx="25" cy="25" r="20" stroke="rgba(255,255,255,0.35)" stroke-width="5"/>
+            <path d="M25 5 A20 20 0 0 1 45 25" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+          </svg>
+          <span id="btnLabel">Dibuja un área para continuar</span>
+        </button>
+        <div class="error-box" id="genError" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ===================== TAB: DISTRIBUCIÓN ===================== -->
+    <div class="tab-panel" id="tabLayout" style="display:none;">
+      <div class="empty-panel" id="layoutEmpty">
+        <svg viewBox="0 0 100 100" fill="none">
+          <rect x="15" y="15" width="70" height="46" rx="1" stroke="#DEDACB" stroke-width="2"/>
+          <path d="M25 55 L40 30 L50 42 L60 25 L75 55 Z" stroke="#C1553A" stroke-width="1.6" stroke-dasharray="3 3"/>
+        </svg>
+        <div class="empty-title">Aún no hay planchas generadas</div>
+        <div class="empty-sub">Configura los parámetros y presiona "Generar planchas" para ver aquí cómo quedan distribuidas las piezas.</div>
+      </div>
+      <div id="layoutContent" style="display:none;"></div>
+    </div>
+  </aside>
+</div>
+</div>
+
+<!-- ===================== LOGIN / SIGNUP MODAL (top-level, works from landing or app) ===================== -->
+<div id="authModalBackdrop" class="modal-backdrop" style="display:none;">
+  <div class="modal-card">
+    <div class="tabs" style="border-bottom:1px solid var(--line);margin-bottom:16px;">
+      <button class="tab-btn active" id="authTabLogin">Iniciar sesión</button>
+      <button class="tab-btn" id="authTabSignup">Registrarse</button>
+    </div>
+    <div class="field">
+      <label for="authEmail">Correo</label>
+      <input type="text" id="authEmail" placeholder="tu@correo.com">
+    </div>
+    <div class="field">
+      <label for="authPassword">Contraseña</label>
+      <input type="password" id="authPassword" placeholder="••••••••">
+    </div>
+    <div class="error-box" id="authError" style="display:none;"></div>
+    <button class="cta" id="authSubmitBtn" style="margin-top:14px;">Iniciar sesión</button>
+    <button class="ghost-btn" id="authCancelBtn" style="margin-top:8px;">Cancelar</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// ---------------------------------------------------------------------
+// Config -- reemplaza estos 3 valores con los tuyos.
+// Supabase: Project Settings -> API -> Project URL / anon public key.
+// (Todos son valores PÚBLICOS, seguros de dejar en el código del navegador.)
+// ---------------------------------------------------------------------
+const API_BASE = window.TERRAZO_API_BASE || "https://podit-laser-maps-backend.onrender.com";
+const SUPABASE_URL = window.TERRAZO_SUPABASE_URL || "https://kgemfzokkzeivylkikbd.supabase.co";
+const SUPABASE_ANON_KEY = window.TERRAZO_SUPABASE_ANON_KEY || "sb_publishable_z_3bf_lsU_PxZzup9ocAZg_ss7nGf2o";
+
+const supabaseClient = (SUPABASE_URL.includes("TU-PROYECTO"))
+  ? null  // no configurado todavía -- login queda deshabilitado hasta que pegues tus valores reales
+  : supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ---------------------------------------------------------------------
+// Tabs
+// ---------------------------------------------------------------------
+function switchTab(name) {
+  document.getElementById('tabBtnParams').classList.toggle('active', name === 'params');
+  document.getElementById('tabBtnProjects').classList.toggle('active', name === 'projects');
+  document.getElementById('tabBtnIso').classList.toggle('active', name === 'iso');
+  document.getElementById('tabBtnLayout').classList.toggle('active', name === 'layout');
+  document.getElementById('tabParams').style.display = name === 'params' ? 'flex' : 'none';
+  document.getElementById('tabProjects').style.display = name === 'projects' ? 'flex' : 'none';
+  document.getElementById('tabIso').style.display = name === 'iso' ? 'flex' : 'none';
+  document.getElementById('tabLayout').style.display = name === 'layout' ? 'flex' : 'none';
+  if (name === 'projects') loadProjectsList();
+}
+document.getElementById('tabBtnParams').onclick = () => switchTab('params');
+document.getElementById('tabBtnProjects').onclick = () => switchTab('projects');
+document.getElementById('tabBtnIso').onclick = () => switchTab('iso');
+document.getElementById('tabBtnLayout').onclick = () => switchTab('layout');
+
+// ---------------------------------------------------------------------
+// Auth: Supabase email/password. The modal is shared by the landing page
+// and the in-app account menu; `authIntent` says what to do once the
+// person is actually authenticated.
+// ---------------------------------------------------------------------
+let currentSession = null;
+let authMode = 'login'; // 'login' | 'signup'
+
+function requireConfigured() {
+  if (!supabaseClient) {
+    alert('Falta configurar Supabase: define window.TERRAZO_SUPABASE_URL y window.TERRAZO_SUPABASE_ANON_KEY antes de cargar esta página (ver README).');
+    return false;
+  }
+  return true;
+}
+
+function openAuthModal(mode) {
+  if (!requireConfigured()) return;
+  authMode = mode;
+  document.getElementById('authTabLogin').classList.toggle('active', mode === 'login');
+  document.getElementById('authTabSignup').classList.toggle('active', mode === 'signup');
+  document.getElementById('authSubmitBtn').textContent = mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta';
+  document.getElementById('authError').style.display = 'none';
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPassword').value = '';
+  document.getElementById('authModalBackdrop').style.display = 'flex';
+}
+function closeAuthModal() {
+  document.getElementById('authModalBackdrop').style.display = 'none';
+}
+document.getElementById('authTabLogin').onclick = () => openAuthModal('login');
+document.getElementById('authTabSignup').onclick = () => openAuthModal('signup');
+document.getElementById('authCancelBtn').onclick = closeAuthModal;
+
+document.getElementById('authSubmitBtn').onclick = async () => {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errBox = document.getElementById('authError');
+  errBox.style.display = 'none';
+  if (!email || !password) {
+    errBox.textContent = 'Completa correo y contraseña.';
+    errBox.style.display = 'block';
+    return;
+  }
+  try {
+    const { data, error } = authMode === 'login'
+      ? await supabaseClient.auth.signInWithPassword({ email, password })
+      : await supabaseClient.auth.signUp({ email, password });
+    if (error) throw error;
+    if (authMode === 'signup' && !data.session) {
+      errBox.textContent = 'Cuenta creada. Revisa tu correo para confirmar antes de iniciar sesión.';
+      errBox.style.display = 'block';
+      return;
+    }
+    closeAuthModal();
+    await onAuthReady();
+    enterApp();
+  } catch (e) {
+    errBox.textContent = e.message || 'No se pudo completar la solicitud.';
+    errBox.style.display = 'block';
+  }
+};
+
+async function refreshAccountBadge() {
+  const badge = document.getElementById('accountBadge');
+  if (!currentSession) {
+    badge.textContent = 'Plan gratuito · 2 modelos/mes';
+    return;
+  }
+  badge.textContent = currentSession.user.email;
+  document.getElementById('accountMenuEmail').textContent = currentSession.user.email;
+  try {
+    const resp = await fetch(`${API_BASE}/me`, {
+      headers: { Authorization: `Bearer ${currentSession.access_token}` },
+    });
+    if (resp.ok) {
+      const profile = await resp.json();
+      const isPro = profile.subscription_status === 'active';
+      document.getElementById('accountMenuPlan').textContent = isPro
+        ? 'PODIT Pro · sin límite'
+        : `Plan gratuito · ${profile.models_generated_this_month || 0}/2 modelos usados este mes`;
+      document.getElementById('upgradeBtn').style.display = isPro ? 'none' : 'block';
+      document.getElementById('manageSubBtn').style.display = isPro ? 'block' : 'none';
+    }
+  } catch (e) { /* backend not reachable yet -- badge still shows the email */ }
+}
+
+document.getElementById('accountBadge').onclick = () => {
+  if (!currentSession) { openAuthModal('login'); return; }
+  const menu = document.getElementById('accountMenu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+};
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('accountMenu');
+  if (menu.style.display === 'block' && !menu.contains(e.target) && e.target.id !== 'accountBadge') {
+    menu.style.display = 'none';
+  }
+});
+
+document.getElementById('logoutBtn').onclick = async () => {
+  await supabaseClient.auth.signOut();
+  currentSession = null;
+  document.getElementById('accountMenu').style.display = 'none';
+  refreshAccountBadge();
+  backToLanding();
+};
+
+async function startCheckout() {
+  if (!currentSession) { openAuthModal('login'); return; }
+  // Stripe requires real http(s) redirect URLs -- file:// (opening index.html
+  // directly from disk, like during local testing) isn't valid for it. Once
+  // this is deployed on a real domain, window.location.href works as-is.
+  const isLocalFile = window.location.protocol === 'file:';
+  const redirectUrl = isLocalFile ? 'https://podit.cl/pago-completado' : window.location.href;
+  const resp = await fetch(`${API_BASE}/billing/create-checkout-session`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
+    body: JSON.stringify({ success_url: redirectUrl, cancel_url: redirectUrl }),
+  });
+  if (resp.ok) {
+    const { url } = await resp.json();
+    window.location.href = url;
+  } else {
+    const err = await resp.json().catch(() => ({}));
+    alert('No se pudo iniciar el pago:\n' + (err.detail || `Error ${resp.status}`));
+  }
+}
+document.getElementById('upgradeBtn').onclick = startCheckout;
+
+document.getElementById('manageSubBtn').onclick = async () => {
+  if (!currentSession) return;
+  const isLocalFile = window.location.protocol === 'file:';
+  const redirectUrl = isLocalFile ? 'https://podit.cl/cuenta' : window.location.href;
+  const resp = await fetch(`${API_BASE}/billing/create-portal-session`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
+    body: JSON.stringify({ return_url: redirectUrl }),
+  });
+  if (resp.ok) {
+    const { url } = await resp.json();
+    window.location.href = url;
+  } else {
+    const err = await resp.json().catch(() => ({}));
+    alert(err.detail || 'No se pudo abrir el panel de suscripción.');
+  }
+};
+
+async function onAuthReady() {
+  if (!supabaseClient) return;
+  const { data } = await supabaseClient.auth.getSession();
+  currentSession = data.session;
+  await refreshAccountBadge();
+}
+
+// ---------------------------------------------------------------------
+// Mis Proyectos: save/list/load/delete
+// ---------------------------------------------------------------------
+function collectCurrentParams() {
+  return {
+    bbox: currentBBox,
+    scale: document.getElementById('scale').value,
+    scaleCustom: document.getElementById('scaleCustom').value,
+    sheetW: document.getElementById('sheetW').value,
+    sheetH: document.getElementById('sheetH').value,
+    thickness: document.getElementById('thickness').value,
+    outputFormat,
+    includeStreets: document.getElementById('includeStreets').checked,
+    includeBuildings: document.getElementById('includeBuildings').checked,
+    defaultBuildingHeightM: document.getElementById('defaultBuildingHeightM').value,
+    labelTextHeightM: document.getElementById('labelTextHeightM').value,
+    streetWidthM: document.getElementById('streetWidthM').value,
+    streetRaiseMm: document.getElementById('streetRaiseMm').value,
+    manualBuildings,
+  };
+}
+
+document.getElementById('saveProjectBtn').onclick = async () => {
+  if (!currentSession) { openAuthModal('login'); return; }
+  if (!currentBBox) { alert('Primero dibuja un área en el mapa.'); return; }
+  const name = prompt('Nombre para este proyecto:', 'Mi proyecto');
+  if (!name) return;
+  const resp = await fetch(`${API_BASE}/projects`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
+    body: JSON.stringify({ name, params: collectCurrentParams() }),
+  });
+  if (resp.ok) {
+    alert('Proyecto guardado.');
+    switchTab('projects');
+  } else {
+    alert('No se pudo guardar el proyecto.');
+  }
+};
+
+async function loadProjectsList() {
+  const listEl = document.getElementById('projectsList');
+  if (!currentSession) {
+    listEl.innerHTML = '<p class="hint">Inicia sesión para guardar y ver tus proyectos.</p>';
+    return;
+  }
+  listEl.innerHTML = '<p class="hint">Cargando…</p>';
+  const resp = await fetch(`${API_BASE}/projects`, {
+    headers: { Authorization: `Bearer ${currentSession.access_token}` },
+  });
+  if (!resp.ok) {
+    listEl.innerHTML = '<p class="hint">No se pudieron cargar tus proyectos.</p>';
+    return;
+  }
+  const projects = await resp.json();
+  if (!projects.length) {
+    listEl.innerHTML = '<p class="hint">Todavía no tienes proyectos guardados.</p>';
+    return;
+  }
+  listEl.innerHTML = projects.map(p => `
+    <div class="project-card">
+      <div>
+        <div class="project-card-name">${p.name}</div>
+        <div class="project-card-meta">${new Date(p.updated_at || p.created_at).toLocaleDateString()}</div>
+      </div>
+      <div class="project-card-actions">
+        <button data-load="${p.id}">Cargar</button>
+        <button data-delete="${p.id}">Eliminar</button>
+      </div>
+    </div>`).join('');
+
+  listEl.querySelectorAll('[data-load]').forEach(btn => {
+    btn.onclick = () => applyProjectParams(projects.find(p => p.id === btn.dataset.load).params);
+  });
+  listEl.querySelectorAll('[data-delete]').forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm('¿Eliminar este proyecto?')) return;
+      await fetch(`${API_BASE}/projects/${btn.dataset.delete}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${currentSession.access_token}` },
+      });
+      loadProjectsList();
+    };
+  });
+}
+
+function applyProjectParams(params) {
+  if (!params) return;
+  if (params.scale) document.getElementById('scale').value = params.scale;
+  if (params.scaleCustom) document.getElementById('scaleCustom').value = params.scaleCustom;
+  if (params.sheetW) document.getElementById('sheetW').value = params.sheetW;
+  if (params.sheetH) document.getElementById('sheetH').value = params.sheetH;
+  if (params.thickness) document.getElementById('thickness').value = params.thickness;
+  document.getElementById('includeStreets').checked = !!params.includeStreets;
+  document.getElementById('includeBuildings').checked = !!params.includeBuildings;
+  if (params.defaultBuildingHeightM) document.getElementById('defaultBuildingHeightM').value = params.defaultBuildingHeightM;
+  if (params.labelTextHeightM) document.getElementById('labelTextHeightM').value = params.labelTextHeightM;
+  if (params.streetWidthM) document.getElementById('streetWidthM').value = params.streetWidthM;
+  if (params.streetRaiseMm) document.getElementById('streetRaiseMm').value = params.streetRaiseMm;
+  if (params.outputFormat) setFormat(params.outputFormat);
+  manualBuildings = params.manualBuildings || [];
+  document.getElementById('manualBuildingsCount').textContent = manualBuildings.length;
+  if (params.bbox) {
+    currentBBox = params.bbox;
+    document.getElementById('rSouth').textContent = currentBBox.south.toFixed(4);
+    document.getElementById('rNorth').textContent = currentBBox.north.toFixed(4);
+    document.getElementById('rWest').textContent = currentBBox.west.toFixed(4);
+    document.getElementById('rEast').textContent = currentBBox.east.toFixed(4);
+    refreshGenerateButton();
+    if (map) {
+      const bounds = L.latLngBounds([currentBBox.south, currentBBox.west], [currentBBox.north, currentBBox.east]);
+      if (finalLayer) map.removeLayer(finalLayer);
+      finalLayer = L.rectangle(bounds, { color: '#C1553A', weight: 2, fillOpacity: 0.08 }).addTo(map);
+      map.fitBounds(bounds);
+    }
+  }
+  switchTab('params');
+}
+
+// ---------------------------------------------------------------------
+// Landing <-> App navigation (map is created lazily on first entry --
+// Leaflet needs a container that's actually visible/sized to lay out tiles)
+// ---------------------------------------------------------------------
+let map = null;
+let mapInitialized = false;
+
+function enterApp() {
+  document.getElementById('landingView').style.display = 'none';
+  document.getElementById('appView').style.display = 'flex';
+  if (!mapInitialized) {
+    initMap();
+    mapInitialized = true;
+  } else {
+    setTimeout(() => map.invalidateSize(), 0);
+  }
+}
+function backToLanding() {
+  document.getElementById('appView').style.display = 'none';
+  document.getElementById('landingView').style.display = 'block';
+}
+
+function goToAppOrLogin() {
+  if (currentSession) { enterApp(); return; }
+  openAuthModal('login');
+}
+document.getElementById('heroStartBtn').onclick = goToAppOrLogin;
+document.getElementById('signupBtn').onclick = () => openAuthModal('signup');
+document.getElementById('loginBtn').onclick = () => openAuthModal('login');
+document.getElementById('pricingFreeBtn').onclick = goToAppOrLogin;
+document.getElementById('pricingProBtn').onclick = startCheckout;
+document.getElementById('backToLandingBtn').onclick = backToLanding;
+
+onAuthReady();
+
+// ---------------------------------------------------------------------
+// Map + area selection (plain Leaflet, no plugins) — 3 tools:
+// rectangle, circle, freehand polygon. Whatever you draw, the app uses
+// its bounding box as the fetch area for elevation data.
+// ---------------------------------------------------------------------
+let currentBBox = null;
+let currentShape = 'rectangle';
+let drawing = false;
+let points = [];        // polygon vertices / circle center / building-in-progress vertices
+let previewLayer = null;
+let finalLayer = null;
+let manualBuildings = [];       // [{ points: [[lat,lon],...], height_m }]
+let manualBuildingLayers = [];  // matching Leaflet layers, for redraw/clear
+
+function metersBetween(lat1, lon1, lat2, lon2) {
+  const R = 6371000, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function setBBoxFromBounds(bounds) {
+  currentBBox = { south: bounds.getSouth(), west: bounds.getWest(), north: bounds.getNorth(), east: bounds.getEast() };
+  document.getElementById('rSouth').textContent = currentBBox.south.toFixed(4);
+  document.getElementById('rNorth').textContent = currentBBox.north.toFixed(4);
+  document.getElementById('rWest').textContent  = currentBBox.west.toFixed(4);
+  document.getElementById('rEast').textContent  = currentBBox.east.toFixed(4);
+  const w = metersBetween(currentBBox.south, currentBBox.west, currentBBox.south, currentBBox.east);
+  const h = metersBetween(currentBBox.south, currentBBox.west, currentBBox.north, currentBBox.west);
+  document.getElementById('rSize').textContent = `${w.toFixed(0)} × ${h.toFixed(0)} m`;
+  refreshGenerateButton();
+}
+
+function clearDrawingLayers() {
+  if (previewLayer) { map.removeLayer(previewLayer); previewLayer = null; }
+  if (finalLayer) { map.removeLayer(finalLayer); finalLayer = null; }
+}
+
+const hintByShape = {
+  rectangle: 'Haz clic para marcar la primera esquina',
+  circle: 'Haz clic y mantén presionado en el centro, arrastra y suelta para fijar el radio',
+  polygon: 'Haz clic para agregar puntos. Cierra el polígono haciendo clic sobre el primer punto',
+  building: 'Dibuja el contorno del edificio y ciérralo haciendo clic sobre el primer punto',
+};
+
+function startDrawing() {
+  setShape(currentShape === 'building' ? 'rectangle' : currentShape);
+}
+
+function setShape(shape) {
+  currentShape = shape;
+  document.querySelectorAll('.draw-tool-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === shape));
+  points = [];
+  if (previewLayer) { map.removeLayer(previewLayer); previewLayer = null; }
+  drawing = true;
+  document.getElementById('drawHint').style.display = 'block';
+  document.getElementById('drawHint').textContent = hintByShape[shape];
+  map.getContainer().style.cursor = 'crosshair';
+
+  if (shape !== 'building') {
+    // Picking a site-selection tool starts a fresh site pick; the building
+    // tool is additive and must NOT clear the already-chosen site.
+    if (finalLayer) { map.removeLayer(finalLayer); finalLayer = null; }
+    currentBBox = null;
+    refreshGenerateButton();
+  }
+}
+
+function finishDrawing(bounds, shapeLayer) {
+  clearDrawingLayers();
+  finalLayer = shapeLayer.addTo(map);
+  setBBoxFromBounds(bounds);
+  drawing = false;
+  points = [];
+  map.getContainer().style.cursor = '';
+  document.getElementById('drawHint').style.display = 'none';
+}
+
+function distPx(map, a, b) {
+  const pa = map.latLngToContainerPoint(a), pb = map.latLngToContainerPoint(b);
+  return pa.distanceTo(pb);
+}
+
+function initMap() {
+  map = L.map('map', { zoomControl: true, doubleClickZoom: false }).setView([-33.4463, -70.6634], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+  }).addTo(map);
+  setTimeout(() => map.invalidateSize(), 0);
+  window.addEventListener('resize', () => map.invalidateSize());
+
+  map.on('click', (e) => {
+    if (!drawing) return;
+
+    if (currentShape === 'rectangle') {
+      if (points.length === 0) {
+        points = [e.latlng];
+        document.getElementById('drawHint').textContent = 'Mueve el mouse y haz clic para cerrar el rectángulo';
+        return;
+      }
+      const bounds = L.latLngBounds(points[0], e.latlng);
+      finishDrawing(bounds, L.rectangle(bounds, { color: '#C1553A', weight: 2, fillOpacity: 0.08 }));
+      return;
+    }
+
+    // Circle is handled by mousedown/mousemove/mouseup below (click+drag),
+    // not by two separate clicks -- see the comment there for why.
+
+    if (currentShape === 'polygon') {
+      if (points.length >= 3 && distPx(map, points[0], e.latlng) < 12) {
+        const polygon = L.polygon(points, { color: '#C1553A', weight: 2, fillOpacity: 0.08 });
+        finishDrawing(polygon.getBounds(), polygon);
+        return;
+      }
+      points.push(e.latlng);
+      document.getElementById('drawHint').textContent = points.length < 3
+        ? 'Sigue haciendo clic para agregar puntos'
+        : 'Haz clic sobre el primer punto (círculo) para cerrar el polígono';
+      if (previewLayer) map.removeLayer(previewLayer);
+      previewLayer = L.polygon(points, { color: '#C1553A', weight: 2, dashArray: '4 4', fillOpacity: 0.05 }).addTo(map);
+      return;
+    }
+
+    if (currentShape === 'building') {
+      if (points.length >= 3 && distPx(map, points[0], e.latlng) < 12) {
+        const heightStr = prompt('Altura del edificio, en metros:', '15');
+        const heightM = heightStr ? parseFloat(heightStr) : NaN;
+        if (previewLayer) { map.removeLayer(previewLayer); previewLayer = null; }
+        if (!isNaN(heightM) && heightM > 0) {
+          const layer = L.polygon(points, { color: '#2A6F97', weight: 2, fillOpacity: 0.18 })
+            .bindTooltip(`${heightM} m`, { permanent: true, direction: 'center', className: 'building-tooltip' })
+            .addTo(map);
+          manualBuildings.push({ points: points.map(p => [p.lat, p.lng]), height_m: heightM });
+          manualBuildingLayers.push(layer);
+          document.getElementById('manualBuildingsCount').textContent = manualBuildings.length;
+        }
+        points = [];
+        document.getElementById('drawHint').textContent = hintByShape.building;
+        return;
+      }
+      points.push(e.latlng);
+      if (previewLayer) map.removeLayer(previewLayer);
+      previewLayer = L.polygon(points, { color: '#2A6F97', weight: 2, dashArray: '4 4', fillOpacity: 0.08 }).addTo(map);
+      return;
+    }
+  });
+
+  // --- Circle: click-and-drag (mousedown -> mousemove -> mouseup) ---------
+  // A two-click flow is unreliable for circles: Leaflet treats any tiny
+  // mouse movement between press and release as a DRAG, not a click, and
+  // suppresses the 'click' event entirely -- exactly the kind of small
+  // wobble that naturally happens when a person is eyeballing a radius.
+  // Click-and-drag sidesteps that completely (it's also how every other
+  // map drawing tool implements circles).
+  let circleDragging = false;
+  let circleCenter = null;
+
+  map.on('mousedown', (e) => {
+    if (!drawing || currentShape !== 'circle') return;
+    circleDragging = true;
+    circleCenter = e.latlng;
+    map.dragging.disable();
+    document.getElementById('drawHint').textContent = 'Suelta el clic para fijar el radio';
+  });
+
+  map.on('mouseup', (e) => {
+    if (!circleDragging) return;
+    circleDragging = false;
+    map.dragging.enable();
+    const radius = circleCenter.distanceTo(e.latlng);
+    if (radius < 1) {
+      // Essentially a click without dragging -- not a real circle, let the
+      // person try again instead of creating a degenerate 0m circle.
+      document.getElementById('drawHint').textContent = 'Mantén el clic presionado y arrastra para fijar el radio';
+      return;
+    }
+    const circle = L.circle(circleCenter, { radius, color: '#C1553A', weight: 2, fillOpacity: 0.08 });
+    finishDrawing(circle.getBounds(), circle);
+  });
+
+  map.on('mousemove', (e) => {
+    if (drawing && currentShape === 'circle' && circleDragging) {
+      const radius = circleCenter.distanceTo(e.latlng);
+      if (previewLayer) map.removeLayer(previewLayer);
+      previewLayer = L.circle(circleCenter, { radius, color: '#C1553A', weight: 2, dashArray: '4 4', fillOpacity: 0.05 }).addTo(map);
+      return;
+    }
+    if (!drawing || points.length === 0) return;
+
+    if (currentShape === 'rectangle') {
+      const bounds = L.latLngBounds(points[0], e.latlng);
+      if (previewLayer) map.removeLayer(previewLayer);
+      previewLayer = L.rectangle(bounds, { color: '#C1553A', weight: 2, dashArray: '4 4', fillOpacity: 0.05 }).addTo(map);
+    } else if (currentShape === 'polygon' && points.length >= 1) {
+      if (previewLayer) map.removeLayer(previewLayer);
+      previewLayer = L.polyline([...points, e.latlng], { color: '#C1553A', weight: 2, dashArray: '4 4' }).addTo(map);
+    } else if (currentShape === 'building' && points.length >= 1) {
+      if (previewLayer) map.removeLayer(previewLayer);
+      previewLayer = L.polyline([...points, e.latlng], { color: '#2A6F97', weight: 2, dashArray: '4 4' }).addTo(map);
+    }
+  });
+
+  document.querySelectorAll('.draw-tool-btn').forEach(btn => {
+    btn.onclick = () => setShape(btn.dataset.shape);
+  });
+  document.getElementById('redrawBtn').onclick = startDrawing;
+  startDrawing();
+}
+
+// ---------------------------------------------------------------------
+// Params panel
+// ---------------------------------------------------------------------
+const ASSEMBLY_MODE = "A"; // Mode B (hollow+guides) needs more work -- not offered in the UI for now
+
+let outputFormat = "dxf";
+document.getElementById('formatDxf').onclick = () => setFormat("dxf");
+document.getElementById('formatStl').onclick = () => setFormat("stl");
+function setFormat(fmt) {
+  outputFormat = fmt;
+  document.getElementById('formatDxf').classList.toggle('active', fmt === "dxf");
+  document.getElementById('formatStl').classList.toggle('active', fmt === "stl");
+  document.getElementById('thicknessField').style.display = fmt === "dxf" ? 'block' : 'none';
+  document.getElementById('sheetWLabel').textContent = fmt === "dxf" ? "Ancho plancha (mm)" : "Ancho cama impresora (mm)";
+  document.getElementById('sheetHLabel').textContent = fmt === "dxf" ? "Largo plancha (mm)" : "Largo cama impresora (mm)";
+  document.getElementById('plateHint').textContent = fmt === "dxf"
+    ? "Tamaño de la plancha láser."
+    : "Tamaño de la cama de tu impresora 3D (ej. 220x220mm).";
+  document.getElementById('tabBtnIso').style.display = fmt === "dxf" ? 'block' : 'none';
+  document.getElementById('tabBtnLayout').textContent = fmt === "dxf" ? 'Planchas' : 'Resultado STL';
+  document.getElementById('stlStreetFields').style.display = fmt === "stl" ? 'block' : 'none';
+  refreshGenerateButton();
+}
+
+// Scale: presets + "Personalizado"
+const scaleSelect = document.getElementById('scale');
+const scaleCustom = document.getElementById('scaleCustom');
+scaleSelect.addEventListener('change', () => {
+  scaleCustom.style.display = scaleSelect.value === 'custom' ? 'block' : 'none';
+});
+function getScaleDenominator() {
+  if (scaleSelect.value === 'custom') return parseInt(scaleCustom.value, 10) || 200;
+  return parseInt(scaleSelect.value, 10);
+}
+
+// Remember the Mapbox token locally so the user doesn't retype it each time.
+const tokenInput = document.getElementById('mapboxToken');
+tokenInput.value = localStorage.getItem('terrazo_mapbox_token') || '';
+tokenInput.addEventListener('change', () => {
+  localStorage.setItem('terrazo_mapbox_token', tokenInput.value.trim());
+});
+
+function refreshGenerateButton() {
+  const btn = document.getElementById('generateBtn');
+  const label = document.getElementById('btnLabel');
+  if (btn.classList.contains('loading')) return; // don't override the spinner state
+  if (currentBBox) {
+    btn.disabled = false;
+    label.textContent = outputFormat === "dxf" ? "Generar planchas DXF" : "Generar modelo STL";
+  } else {
+    btn.disabled = true;
+    label.textContent = "Dibuja un área para continuar";
+  }
+}
+
+function setButtonLoading(isLoading) {
+  const btn = document.getElementById('generateBtn');
+  const label = document.getElementById('btnLabel');
+  btn.classList.toggle('loading', isLoading);
+  btn.disabled = isLoading;
+  label.textContent = isLoading ? "Generando…" : "Generar planchas DXF";
+}
+
+// ---------------------------------------------------------------------
+// Distribución tab: render each sheet as an SVG with its placed pieces
+// ---------------------------------------------------------------------
+function renderLayoutTab(previewData, blobUrl) {
+  document.getElementById('layoutEmpty').style.display = 'none';
+  const content = document.getElementById('layoutContent');
+  content.style.display = 'block';
+
+  const s = previewData.summary;
+  let html = `
+    <div class="layout-summary">
+      <div class="summary-list">
+        <div><span>Cotas extraídas</span><span>${s.num_elevation_bands}</span></div>
+        <div><span>Intervalo</span><span>${s.contour_interval_m} m</span></div>
+        <div><span>Piezas totales</span><span>${s.num_parts_total}</span></div>
+        <div><span>Fragmentos (tiling)</span><span>${s.num_parts_tiled_fragments}</span></div>
+        <div><span>Planchas necesarias</span><span>${s.num_sheets}</span></div>
+      </div>
+      ${s.street_building_warning ? `<div class="error-box" style="margin-top:10px;">${s.street_building_warning}</div>` : ''}
+      <button class="download-btn" id="dlBtn" ${blobUrl ? '' : 'disabled'}>
+        ${blobUrl ? 'Descargar planchas.zip' : 'Preparando descarga…'}
+      </button>
+    </div>`;
+
+  const W = previewData.sheet_width_mm, H = previewData.sheet_height_mm;
+  for (const sheet of previewData.sheets) {
+    const polys = sheet.parts.map(part => {
+      const ext = part.exterior.map(p => p.join(',')).join(' L ');
+      let d = `M ${ext} Z`;
+      for (const hole of part.holes) {
+        const h = hole.map(p => p.join(',')).join(' L ');
+        d += ` M ${h} Z`;
+      }
+      const cx = part.exterior.reduce((a, p) => a + p[0], 0) / part.exterior.length;
+      const cy = part.exterior.reduce((a, p) => a + p[1], 0) / part.exterior.length;
+      return `<path d="${d}" class="part-shape${part.is_fragment ? ' fragment' : ''}"/>
+              <text x="${cx}" y="${cy}" class="part-label" text-anchor="middle">${part.id}</text>`;
+    }).join('');
+
+    html += `
+      <div class="sheet-card">
+        <div class="sheet-card-title"><span>Plancha ${sheet.sheet_index + 1} / ${previewData.sheets.length}</span><span>${sheet.parts.length} pieza(s)</span></div>
+        <div class="sheet-svg-wrap">
+          <svg viewBox="0 0 ${W} ${H}" style="transform:scaleY(-1)">
+            <rect x="0" y="0" width="${W}" height="${H}" fill="#fff" stroke="#DEDACB" stroke-width="2"/>
+            ${polys}
+          </svg>
+        </div>
+      </div>`;
+  }
+  content.innerHTML = html;
+
+  const dlBtn = document.getElementById('dlBtn');
+  if (dlBtn && blobUrl) {
+    dlBtn.onclick = () => {
+      const a = document.createElement('a');
+      a.href = blobUrl; a.download = 'terreno_planchas.zip'; a.click();
+    };
+  }
+}
+
+function resetLayoutTab() {
+  document.getElementById('layoutEmpty').style.display = 'flex';
+  document.getElementById('layoutContent').style.display = 'none';
+  document.getElementById('layoutContent').innerHTML = '';
+}
+
+// ---------------------------------------------------------------------
+// Vista isométrica tab: schematic isometric projection of the stacked
+// layers as they'll look once assembled (independent of how pieces get
+// tiled/nested onto sheets).
+// ---------------------------------------------------------------------
+function lerpColor(hexA, hexB, t) {
+  const a = [1, 3, 5].map(i => parseInt(hexA.slice(i, i + 2), 16));
+  const b = [1, 3, 5].map(i => parseInt(hexB.slice(i, i + 2), 16));
+  const c = a.map((v, i) => Math.round(v + (b[i] - v) * t));
+  return `rgb(${c.join(',')})`;
+}
+
+function renderIsoTab(assemblyData) {
+  document.getElementById('isoEmpty').style.display = 'none';
+  const content = document.getElementById('isoContent');
+  content.style.display = 'block';
+
+  const layers = assemblyData.layers;
+  if (!layers.length) {
+    content.innerHTML = '<div class="hint">No hay capas para mostrar.</div>';
+    return;
+  }
+
+  // Physical layer thickness is often only a few mm -- too thin to read as
+  // a stack. Exaggerate the vertical spacing purely for this schematic
+  // preview (does not affect the real DXF/model dimensions).
+  const gap = assemblyData.material_thickness_mm * 6;
+  const cos30 = Math.cos(Math.PI / 6), sin30 = Math.sin(Math.PI / 6);
+  const project = (x, y, z) => [(x - y) * cos30, (x + y) * sin30 - z];
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const shapes = [];
+  layers.forEach((layer, i) => {
+    const z = i * gap;
+    const t = layers.length > 1 ? i / (layers.length - 1) : 0;
+    const fill = lerpColor('#EADFCE', '#C1553A', t * 0.55);
+
+    for (const shelf of layer.shelves) {
+      const extPts = shelf.exterior.map(([x, y]) => project(x, y, z));
+      extPts.forEach(([px, py]) => {
+        minX = Math.min(minX, px); maxX = Math.max(maxX, px);
+        minY = Math.min(minY, py); maxY = Math.max(maxY, py);
+      });
+      let d = `M ${extPts.map(p => p.join(',')).join(' L ')} Z`;
+      for (const hole of shelf.holes) {
+        const hPts = hole.map(([x, y]) => project(x, y, z));
+        d += ` M ${hPts.map(p => p.join(',')).join(' L ')} Z`;
+      }
+      shapes.push({ d, fill, z });
+    }
+  });
+
+  // Painter's algorithm: draw lower shelves first so higher ones (which
+  // are visually "in front" in this projection) draw on top correctly.
+  shapes.sort((a, b) => a.z - b.z);
+
+  const pad = Math.max((maxX - minX), (maxY - minY)) * 0.08 + 10;
+  const vbX = minX - pad, vbY = minY - pad;
+  const vbW = (maxX - minX) + pad * 2, vbH = (maxY - minY) + pad * 2;
+
+  const pathsSvg = shapes.map(s =>
+    `<path d="${s.d}" fill="${s.fill}" stroke="#2A2822" stroke-width="${Math.max(vbW, vbH) * 0.002}" fill-rule="evenodd"/>`
+  ).join('');
+
+  content.innerHTML = `
+    <p class="hint" style="margin-bottom:12px;">Vista esquemática de cómo queda el terreno una vez armado (${layers.length} capas, separación vertical exagerada para que se lea).</p>
+    <div class="sheet-svg-wrap">
+      <svg viewBox="${vbX} ${vbY} ${vbW} ${vbH}" style="transform:scaleY(-1);">
+        ${pathsSvg}
+      </svg>
+    </div>`;
+}
+
+function resetIsoTab() {
+  document.getElementById('isoEmpty').style.display = 'flex';
+  document.getElementById('isoContent').style.display = 'none';
+  document.getElementById('isoContent').innerHTML = '';
+}
+
+// ---------------------------------------------------------------------
+// Generate flow: /preview (layout) + /generate (zip) in parallel
+// ---------------------------------------------------------------------
+function showError(message) {
+  const box = document.getElementById('genError');
+  box.textContent = message;
+  box.style.display = 'block';
+}
+function clearError() {
+  document.getElementById('genError').style.display = 'none';
+}
+
+async function handleGenerate() {
+  if (!currentBBox) return;
+  const token = tokenInput.value.trim();
+  if (!token) {
+    showError("Ingresa tu Mapbox access token antes de generar.");
+    tokenInput.focus();
+    return;
+  }
+  clearError();
+  setButtonLoading(true);
+  resetLayoutTab();
+  resetIsoTab();
+
+  const scaleDenominator = getScaleDenominator();
+  const commonFields = {
+    south: currentBBox.south, west: currentBBox.west,
+    north: currentBBox.north, east: currentBBox.east,
+    scale_denominator: scaleDenominator,
+    mapbox_access_token: token,
+    include_streets: document.getElementById('includeStreets').checked,
+    include_buildings: document.getElementById('includeBuildings').checked,
+    manual_buildings: manualBuildings,
+    default_building_height_m: parseFloat(document.getElementById('defaultBuildingHeightM').value),
+    label_text_real_height_m: parseFloat(document.getElementById('labelTextHeightM').value),
+  };
+
+  async function postJSON(path, payload) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (currentSession) headers['Authorization'] = `Bearer ${currentSession.access_token}`;
+    const resp = await fetch(`${API_BASE}${path}`, {
+      method: 'POST', headers, body: JSON.stringify(payload)
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || `Error ${resp.status} en ${path}`);
+    }
+    return resp;
+  }
+
+  try {
+    if (outputFormat === 'stl') {
+      const stlPayload = {
+        ...commonFields,
+        bed_width_mm: parseFloat(document.getElementById('sheetW').value),
+        bed_height_mm: parseFloat(document.getElementById('sheetH').value),
+        street_width_m: parseFloat(document.getElementById('streetWidthM').value),
+        street_raise_mm: parseFloat(document.getElementById('streetRaiseMm').value),
+      };
+      const stlResp = await postJSON('/generate-stl', stlPayload);
+      const summaryHeader = stlResp.headers.get('X-Model-Summary');
+      const summary = summaryHeader ? JSON.parse(summaryHeader) : {};
+      const zipBlob = await stlResp.blob();
+      const zip = await JSZip.loadAsync(zipBlob);
+      const terrainOnlyBlob = await zip.file('terreno_solo.stl').async('blob');
+      const fullBlob = zip.file('terreno_completo.stl')
+        ? await zip.file('terreno_completo.stl').async('blob')
+        : null;
+      renderStlResult(summary, terrainOnlyBlob, fullBlob);
+      switchTab('layout');
+    } else {
+      const dxfPayload = {
+        ...commonFields,
+        sheet_width_mm: parseFloat(document.getElementById('sheetW').value),
+        sheet_height_mm: parseFloat(document.getElementById('sheetH').value),
+        material_thickness_mm: parseFloat(document.getElementById('thickness').value),
+        assembly_mode: ASSEMBLY_MODE,
+      };
+      const [previewResp, assemblyResp, generateResp] = await Promise.all([
+        postJSON('/preview', dxfPayload),
+        postJSON('/preview-assembly', dxfPayload),
+        postJSON('/generate', dxfPayload),
+      ]);
+      const previewData = await previewResp.json();
+      const assemblyData = await assemblyResp.json();
+      const blob = await generateResp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      renderLayoutTab(previewData, blobUrl);
+      renderIsoTab(assemblyData);
+      switchTab('iso');
+    }
+  } catch (e) {
+    const msg = (e instanceof TypeError)
+      ? `No se pudo conectar con el servidor (${API_BASE}). ¿Está corriendo el backend?`
+      : e.message;
+    showError(msg);
+  } finally {
+    setButtonLoading(false);
+    refreshGenerateButton();
+    if (currentSession) refreshAccountBadge();
+  }
+}
+
+function renderStlResult(summary, terrainOnlyBlob, fullBlob) {
+  document.getElementById('layoutEmpty').style.display = 'none';
+  const content = document.getElementById('layoutContent');
+  content.style.display = 'block';
+  const warn = summary.bed_warning || summary.street_building_warning;
+  const defaultedNote = summary.num_buildings_defaulted > 0
+    ? `<p class="hint" style="margin-top:6px;">${summary.num_buildings_defaulted} edificio(s) de OSM no tenían altura registrada -- se usó la altura por defecto.</p>` : '';
+  content.innerHTML = `
+    <div class="layout-summary">
+      <div class="summary-list">
+        <div><span>Tamaño del modelo</span><span>${summary.footprint_mm ? summary.footprint_mm.join(' x ') + ' mm' : '—'}</span></div>
+        <div><span>Cabe en la cama</span><span>${summary.fits_bed ? 'Sí' : 'No'}</span></div>
+        <div><span>Calles incluidas</span><span>${summary.num_streets}</span></div>
+        <div><span>Edificios incluidos</span><span>${summary.num_buildings}</span></div>
+      </div>
+      ${defaultedNote}
+      ${warn ? `<div class="error-box" style="margin-top:10px;">${warn}</div>` : ''}
+      <button class="download-btn" id="dlTerrainBtn">Descargar solo terreno (.stl)</button>
+      ${fullBlob ? '<button class="download-btn" id="dlFullBtn">Descargar terreno + calles/edificios (.stl)</button>' : ''}
+    </div>`;
+  document.getElementById('dlTerrainBtn').onclick = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(terrainOnlyBlob); a.download = 'terreno_solo.stl'; a.click();
+  };
+  if (fullBlob) {
+    document.getElementById('dlFullBtn').onclick = () => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(fullBlob); a.download = 'terreno_completo.stl'; a.click();
+    };
+  }
+}
+
+document.getElementById('generateBtn').onclick = handleGenerate;
+</script>
+</body>
+</html>
