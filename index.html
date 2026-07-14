@@ -571,15 +571,6 @@
         </div>
       </div>
 
-      <div class="side-section">
-        <p class="eyebrow">04 — Datos de elevación</p>
-        <h2>Mapbox access token</h2>
-        <p class="hint">Se usa para descargar la elevación real del terreno (Terrain-RGB). Se guarda solo en tu navegador.</p>
-        <div class="field" style="margin-top:10px;">
-          <input type="password" id="mapboxToken" placeholder="pk.eyJ1Ijoi...">
-        </div>
-      </div>
-
       <div class="side-section" style="flex:0;">
         <button class="cta" id="generateBtn" disabled>
           <svg class="btn-spinner" viewBox="0 0 50 50" fill="none">
@@ -638,7 +629,7 @@
 // Supabase: Project Settings -> API -> Project URL / anon public key.
 // (Todos son valores PÚBLICOS, seguros de dejar en el código del navegador.)
 // ---------------------------------------------------------------------
-const API_BASE = window.TERRAZO_API_BASE || "http://localhost:8000";
+const API_BASE = window.TERRAZO_API_BASE || "https://podit-laser-maps-backend.onrender.com";
 const SUPABASE_URL = window.TERRAZO_SUPABASE_URL || "https://kgemfzokkzeivylkikbd.supabase.co";
 const SUPABASE_ANON_KEY = window.TERRAZO_SUPABASE_ANON_KEY || "sb_publishable_z_3bf_lsU_PxZzup9ocAZg_ss7nGf2o";
 
@@ -1216,13 +1207,6 @@ function getScaleDenominator() {
   return parseInt(scaleSelect.value, 10);
 }
 
-// Remember the Mapbox token locally so the user doesn't retype it each time.
-const tokenInput = document.getElementById('mapboxToken');
-tokenInput.value = localStorage.getItem('terrazo_mapbox_token') || '';
-tokenInput.addEventListener('change', () => {
-  localStorage.setItem('terrazo_mapbox_token', tokenInput.value.trim());
-});
-
 function refreshGenerateButton() {
   const btn = document.getElementById('generateBtn');
   const label = document.getElementById('btnLabel');
@@ -1409,12 +1393,6 @@ function clearError() {
 
 async function handleGenerate() {
   if (!currentBBox) return;
-  const token = tokenInput.value.trim();
-  if (!token) {
-    showError("Ingresa tu Mapbox access token antes de generar.");
-    tokenInput.focus();
-    return;
-  }
   clearError();
   setButtonLoading(true);
   resetLayoutTab();
@@ -1425,7 +1403,6 @@ async function handleGenerate() {
     south: currentBBox.south, west: currentBBox.west,
     north: currentBBox.north, east: currentBBox.east,
     scale_denominator: scaleDenominator,
-    mapbox_access_token: token,
     include_streets: document.getElementById('includeStreets').checked,
     include_buildings: document.getElementById('includeBuildings').checked,
     manual_buildings: manualBuildings,
