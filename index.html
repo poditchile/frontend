@@ -763,6 +763,19 @@ document.getElementById('logoutBtn').onclick = async () => {
   backToLanding();
 };
 
+function formatErrorDetail(detail) {
+  if (!detail) return null;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    // FastAPI/Pydantic validation error shape: [{loc:[...], msg:..., type:...}, ...]
+    return detail.map(d => {
+      const field = Array.isArray(d.loc) ? d.loc.filter(x => x !== 'body').join(' -> ') : '';
+      return field ? `${field}: ${d.msg}` : (d.msg || JSON.stringify(d));
+    }).join('\n');
+  }
+  return JSON.stringify(detail);
+}
+
 async function startCheckout() {
   if (!currentSession) { openAuthModal('login'); return; }
   // Stripe requires real http(s) redirect URLs -- file:// (opening index.html
@@ -780,7 +793,7 @@ async function startCheckout() {
     window.location.href = url;
   } else {
     const err = await resp.json().catch(() => ({}));
-    alert('No se pudo iniciar el pago:\n' + (err.detail || `Error ${resp.status}`));
+    alert('No se pudo iniciar el pago:\n' + (formatErrorDetail(err.detail) || `Error ${resp.status}`));
   }
 }
 document.getElementById('upgradeBtn').onclick = startCheckout;
@@ -799,7 +812,7 @@ document.getElementById('manageSubBtn').onclick = async () => {
     window.location.href = url;
   } else {
     const err = await resp.json().catch(() => ({}));
-    alert(err.detail || 'No se pudo abrir el panel de suscripción.');
+    alert(formatErrorDetail(err.detail) || 'No se pudo abrir el panel de suscripción.');
   }
 };
 
@@ -1418,7 +1431,7 @@ async function handleGenerate() {
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-      throw new Error(err.detail || `Error ${resp.status} en ${path}`);
+      throw new Error(formatErrorDetail(err.detail) || `Error ${resp.status} en ${path}`);
     }
     return resp;
   }
