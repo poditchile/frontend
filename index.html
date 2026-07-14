@@ -92,7 +92,7 @@
   .spinner{animation:spin 1.6s linear infinite;transform-origin:center;}
   @keyframes spin{to{transform:rotate(360deg);}}
 
-  .draw-hint{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:7px 14px;border-radius:20px;font-family:'IBM Plex Mono',monospace;font-size:0.74rem;color:var(--ink-soft);box-shadow:0 2px 8px rgba(0,0,0,0.06);z-index:1000;pointer-events:none;}
+  .draw-hint{position:absolute;top:64px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:7px 14px;border-radius:20px;font-family:'IBM Plex Mono',monospace;font-size:0.74rem;color:var(--ink-soft);box-shadow:0 2px 8px rgba(0,0,0,0.06);z-index:999;pointer-events:none;}
 
   /* ---------- Distribución tab ---------- */
   .layout-summary{padding:16px 22px;border-bottom:1px solid var(--line);}
@@ -197,7 +197,8 @@
     .side-section{padding:16px 18px;}
     .row2{grid-template-columns:1fr;}
 
-    .draw-toolbar{top:8px;left:8px;}
+    .draw-toolbar{top:64px;left:8px;}
+    .map-search-box{width:calc(100vw - 90px);top:8px;left:calc(50% + 20px);}
     .draw-tool-btn{width:34px;height:34px;}
     .draw-hint{max-width:88vw;text-align:center;font-size:0.68rem;padding:6px 12px;}
 
@@ -219,6 +220,39 @@
   }
   .draw-tool-btn:last-child{border-bottom:none;}
   .draw-tool-btn.active{background:var(--accent);color:#fff;}
+
+  /* ---------- Map place search ---------- */
+  .map-search-box{
+    position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:1000;
+    display:flex;align-items:center;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);overflow:visible;width:min(360px,80vw);
+  }
+  .map-search-box input{
+    flex:1;border:none;background:transparent;padding:10px 12px;font-family:'Inter',sans-serif;
+    font-size:0.86rem;color:var(--ink);outline:none;
+  }
+  .map-search-box button{
+    border:none;background:transparent;padding:8px 12px;cursor:pointer;font-size:0.95rem;
+  }
+  .place-search-results{
+    position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,0.12);
+    max-height:220px;overflow-y:auto;
+  }
+  .place-search-result{
+    padding:9px 12px;font-size:0.82rem;cursor:pointer;border-bottom:1px solid var(--line);
+  }
+  .place-search-result:last-child{border-bottom:none;}
+  .place-search-result:hover{background:var(--paper);}
+
+  /* ---------- Area limit progress bar ---------- */
+  .area-bar-wrap{margin-top:10px;}
+  .area-bar-track{
+    position:relative;height:10px;border-radius:5px;background:var(--line);overflow:visible;
+  }
+  .area-bar-fill{height:100%;border-radius:5px;background:var(--ok);transition:width .15s ease, background .15s ease;}
+  .area-bar-fill.over-limit{background:var(--accent);}
+  .area-bar-legend{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:0.66rem;color:var(--ink-soft);margin-top:4px;}
 
   .checkbox-field label{display:flex;align-items:center;gap:8px;font-size:0.82rem;color:var(--ink);cursor:pointer;font-weight:500;}
   .checkbox-field input{width:auto;}
@@ -425,6 +459,11 @@
 <div class="layout">
   <div style="position:relative;flex:1;min-width:0;">
     <div id="map"></div>
+    <div class="map-search-box">
+      <input type="text" id="placeSearchInput" placeholder="Buscar ciudad o lugar…" autocomplete="off">
+      <button type="button" id="placeSearchBtn" title="Buscar">🔍</button>
+      <div id="placeSearchResults" class="place-search-results" style="display:none;"></div>
+    </div>
     <div class="draw-toolbar" id="drawToolbar">
       <button type="button" class="draw-tool-btn active" data-shape="rectangle" title="Rectángulo">▭</button>
       <button type="button" class="draw-tool-btn" data-shape="circle" title="Círculo">◯</button>
@@ -482,8 +521,18 @@
           <div>Este <b id="rEast">—</b></div>
           <div style="grid-column:1/-1;">Área seleccionada <b id="rSize">—</b></div>
         </div>
+        <div class="area-bar-wrap">
+          <div class="area-bar-track"><div class="area-bar-fill" id="areaBarFill" style="width:0%;"></div></div>
+          <div class="area-bar-legend">
+            <span>Gratis hasta <span id="areaBarFreeLabel">0,16</span> km²</span>
+            <span id="areaBarProLabel">Pro hasta 1,0 km²</span>
+          </div>
+        </div>
         <div class="error-box" id="areaWarning" style="display:none;margin-top:8px;"></div>
-        <button type="button" class="ghost-btn" id="redrawBtn">Redibujar área</button>
+        <div class="row2" style="margin-top:8px;">
+          <button type="button" class="ghost-btn" id="redrawBtn" style="margin:0;">Redibujar área</button>
+          <button type="button" class="ghost-btn" id="clearSelectionBtn" style="margin:0;">✕ Limpiar selección</button>
+        </div>
       </div>
 
       <div class="side-section">
@@ -932,6 +981,21 @@ function applyProjectParams(params) {
   if (params.outputFormat) setFormat(params.outputFormat);
   manualBuildings = params.manualBuildings || [];
   document.getElementById('manualBuildingsCount').textContent = manualBuildings.length;
+  // The array survives a save/reload just fine, but the polygons themselves
+  // were never redrawn on the map -- without this, a student adding
+  // buildings one-by-one over several sessions couldn't see which parts of
+  // the site they'd already covered after reopening the project.
+  manualBuildingLayers.forEach(l => map && map.removeLayer(l));
+  manualBuildingLayers = [];
+  if (map) {
+    manualBuildings.forEach(b => {
+      const latlngs = b.points.map(p => [p[0], p[1]]);
+      const layer = L.polygon(latlngs, { color: '#2A6F97', weight: 2, fillOpacity: 0.18 })
+        .bindTooltip(`${b.height_m} m`, { permanent: true, direction: 'center', className: 'building-tooltip' })
+        .addTo(map);
+      manualBuildingLayers.push(layer);
+    });
+  }
   if (params.bbox) {
     currentBBox = params.bbox;
     document.getElementById('rSouth').textContent = currentBBox.south.toFixed(4);
@@ -968,6 +1032,7 @@ function enterApp() {
   document.getElementById('appView').style.display = 'flex';
   if (!mapInitialized) {
     initMap();
+    initPlaceSearch();
     mapInitialized = true;
   } else {
     setTimeout(() => map.invalidateSize(), 0);
@@ -976,6 +1041,64 @@ function enterApp() {
 function backToLanding() {
   document.getElementById('appView').style.display = 'none';
   document.getElementById('landingView').style.display = 'block';
+}
+
+// ---------------------------------------------------------------------
+// Place search (Nominatim -- OpenStreetMap's free geocoder, no API key)
+// ---------------------------------------------------------------------
+function initPlaceSearch() {
+  const input = document.getElementById('placeSearchInput');
+  const btn = document.getElementById('placeSearchBtn');
+  const resultsBox = document.getElementById('placeSearchResults');
+  let debounceTimer = null;
+
+  async function runSearch(query) {
+    if (!query || query.trim().length < 2) {
+      resultsBox.style.display = 'none';
+      return;
+    }
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=6&q=${encodeURIComponent(query)}`;
+      const resp = await fetch(url, { headers: { 'Accept-Language': 'es' } });
+      const results = await resp.json();
+      if (!results.length) {
+        resultsBox.innerHTML = '<div class="place-search-result">Sin resultados</div>';
+        resultsBox.style.display = 'block';
+        return;
+      }
+      resultsBox.innerHTML = results.map((r, i) =>
+        `<div class="place-search-result" data-idx="${i}">${r.display_name}</div>`).join('');
+      resultsBox.style.display = 'block';
+      resultsBox.querySelectorAll('.place-search-result[data-idx]').forEach(el => {
+        el.onclick = () => {
+          const r = results[parseInt(el.dataset.idx, 10)];
+          const lat = parseFloat(r.lat), lon = parseFloat(r.lon);
+          if (r.boundingbox) {
+            const [south, north, west, east] = r.boundingbox.map(parseFloat);
+            map.fitBounds([[south, west], [north, east]]);
+          } else {
+            map.setView([lat, lon], 15);
+          }
+          resultsBox.style.display = 'none';
+          input.value = r.display_name;
+        };
+      });
+    } catch (e) {
+      resultsBox.style.display = 'none';
+    }
+  }
+
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => runSearch(input.value), 500);
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { clearTimeout(debounceTimer); runSearch(input.value); }
+  });
+  btn.onclick = () => runSearch(input.value);
+  document.addEventListener('click', (e) => {
+    if (!resultsBox.contains(e.target) && e.target !== input) resultsBox.style.display = 'none';
+  });
 }
 
 function goToAppOrLogin() {
@@ -1030,6 +1153,19 @@ function polygonAreaM2(latlngs) {
   return Math.abs(area / 2);
 }
 
+function updateAreaBar(areaM2) {
+  const freeKm2 = 0.16, proKm2 = 1.0;
+  document.getElementById('areaBarFreeLabel').textContent = freeKm2.toFixed(2).replace('.', ',');
+  const maxKm2 = currentPlanLimits.isPro ? proKm2 : freeKm2;
+  document.getElementById('areaBarProLabel').textContent = currentPlanLimits.isPro
+    ? `Pro hasta ${proKm2.toFixed(1)} km²` : `Pro: hasta ${proKm2.toFixed(1)} km²`;
+  const areaKm2 = areaM2 / 1_000_000;
+  const pct = Math.min(100, (areaKm2 / maxKm2) * 100);
+  const fill = document.getElementById('areaBarFill');
+  fill.style.width = `${pct}%`;
+  fill.classList.toggle('over-limit', areaKm2 > maxKm2);
+}
+
 function setSelection(bounds, shapeType, shapeData, areaM2) {
   currentBBox = { south: bounds.getSouth(), west: bounds.getWest(), north: bounds.getNorth(), east: bounds.getEast() };
   currentSelectionShape = shapeData;
@@ -1050,6 +1186,7 @@ function setSelection(bounds, shapeType, shapeData, areaM2) {
   } else {
     warnEl.style.display = 'none';
   }
+  updateAreaBar(areaM2);
   refreshGenerateButton();
 }
 
@@ -1218,11 +1355,17 @@ function initMap() {
                   circleArea);
   });
 
+  function showLiveArea(areaM2) {
+    document.getElementById('rSize').textContent = `${areaM2.toLocaleString('es-CL', {maximumFractionDigits: 0})} m²`;
+    updateAreaBar(areaM2);
+  }
+
   map.on('mousemove', (e) => {
     if (drawing && currentShape === 'circle' && circleDragging) {
       const radius = circleCenter.distanceTo(e.latlng);
       if (previewLayer) map.removeLayer(previewLayer);
       previewLayer = L.circle(circleCenter, { radius, color: '#1B3A5C', weight: 2, dashArray: '4 4', fillOpacity: 0.05 }).addTo(map);
+      showLiveArea(Math.PI * radius * radius);
       return;
     }
     if (!drawing || points.length === 0) return;
@@ -1231,9 +1374,13 @@ function initMap() {
       const bounds = L.latLngBounds(points[0], e.latlng);
       if (previewLayer) map.removeLayer(previewLayer);
       previewLayer = L.rectangle(bounds, { color: '#1B3A5C', weight: 2, dashArray: '4 4', fillOpacity: 0.05 }).addTo(map);
+      const w = metersBetween(bounds.getSouth(), bounds.getWest(), bounds.getSouth(), bounds.getEast());
+      const h = metersBetween(bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getWest());
+      showLiveArea(w * h);
     } else if (currentShape === 'polygon' && points.length >= 1) {
       if (previewLayer) map.removeLayer(previewLayer);
       previewLayer = L.polyline([...points, e.latlng], { color: '#1B3A5C', weight: 2, dashArray: '4 4' }).addTo(map);
+      if (points.length >= 2) showLiveArea(polygonAreaM2([...points, e.latlng]));
     } else if (currentShape === 'building' && points.length >= 1) {
       if (previewLayer) map.removeLayer(previewLayer);
       previewLayer = L.polyline([...points, e.latlng], { color: '#2A6F97', weight: 2, dashArray: '4 4' }).addTo(map);
@@ -1244,6 +1391,22 @@ function initMap() {
     btn.onclick = () => setShape(btn.dataset.shape);
   });
   document.getElementById('redrawBtn').onclick = startDrawing;
+  document.getElementById('clearSelectionBtn').onclick = () => {
+    if (finalLayer) { map.removeLayer(finalLayer); finalLayer = null; }
+    currentBBox = null;
+    currentSelectionShape = null;
+    currentAreaM2 = 0;
+    document.getElementById('rSouth').textContent = '—';
+    document.getElementById('rNorth').textContent = '—';
+    document.getElementById('rWest').textContent = '—';
+    document.getElementById('rEast').textContent = '—';
+    document.getElementById('rSize').textContent = '—';
+    document.getElementById('areaWarning').style.display = 'none';
+    updateAreaBar(0);
+    drawing = false;
+    document.getElementById('drawHint').style.display = 'none';
+    refreshGenerateButton();
+  };
   startDrawing();
 }
 
