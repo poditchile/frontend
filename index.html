@@ -366,7 +366,8 @@
         <p class="price">$0<span>/mes</span></p>
         <p class="hint">Para probar y proyectos chicos.</p>
         <ul>
-          <li>2 modelos por mes</li>
+          <li>5 modelos por mes</li>
+          <li>Hasta 0,16 km² por sitio</li>
           <li>DXF y STL</li>
           <li>Calles y edificios de OSM</li>
         </ul>
@@ -378,8 +379,9 @@
         <p class="price">$3<span>USD/mes</span></p>
         <p class="hint">Para uso frecuente y sitios más grandes.</p>
         <ul>
-          <li>Modelos ilimitados</li>
-          <li>Sitios de mayor tamaño</li>
+          <li>15 modelos por mes</li>
+          <li>Hasta 1,0 km² por sitio</li>
+          <li>Mismas capacidades técnicas</li>
           <li>Soporte prioritario</li>
         </ul>
         <button class="cta" style="width:100%;" id="pricingProBtn">Empezar prueba</button>
@@ -478,8 +480,9 @@
           <div>Norte <b id="rNorth">—</b></div>
           <div>Oeste <b id="rWest">—</b></div>
           <div>Este <b id="rEast">—</b></div>
-          <div style="grid-column:1/-1;">Tamaño aprox. <b id="rSize">—</b></div>
+          <div style="grid-column:1/-1;">Área seleccionada <b id="rSize">—</b></div>
         </div>
+        <div class="error-box" id="areaWarning" style="display:none;margin-top:8px;"></div>
         <button type="button" class="ghost-btn" id="redrawBtn">Redibujar área</button>
       </div>
 
@@ -722,7 +725,8 @@ document.getElementById('authSubmitBtn').onclick = async () => {
 async function refreshAccountBadge() {
   const badge = document.getElementById('accountBadge');
   if (!currentSession) {
-    badge.textContent = 'Plan gratuito · 2 modelos/mes';
+    badge.textContent = 'Plan gratuito · 5 modelos/mes';
+    currentPlanLimits = { maxAreaM2: 160000, isPro: false };
     return;
   }
   badge.textContent = currentSession.user.email;
@@ -734,9 +738,11 @@ async function refreshAccountBadge() {
     if (resp.ok) {
       const profile = await resp.json();
       const isPro = profile.subscription_status === 'active';
+      currentPlanLimits = { maxAreaM2: isPro ? 1000000 : 160000, isPro };
+      const monthlyLimit = isPro ? 15 : 5;
       document.getElementById('accountMenuPlan').textContent = isPro
-        ? 'PODIT Pro · sin límite'
-        : `Plan gratuito · ${profile.models_generated_this_month || 0}/2 modelos usados este mes`;
+        ? `PODIT Pro · ${profile.models_generated_this_month || 0}/15 modelos usados este mes`
+        : `Plan gratuito · ${profile.models_generated_this_month || 0}/5 modelos usados este mes`;
       document.getElementById('upgradeBtn').style.display = isPro ? 'none' : 'block';
       document.getElementById('manageSubBtn').style.display = isPro ? 'block' : 'none';
     }
@@ -829,6 +835,8 @@ async function onAuthReady() {
 function collectCurrentParams() {
   return {
     bbox: currentBBox,
+    selectionShape: currentSelectionShape,
+    areaM2: currentAreaM2,
     scale: document.getElementById('scale').value,
     scaleCustom: document.getElementById('scaleCustom').value,
     sheetW: document.getElementById('sheetW').value,
@@ -930,12 +938,19 @@ function applyProjectParams(params) {
     document.getElementById('rNorth').textContent = currentBBox.north.toFixed(4);
     document.getElementById('rWest').textContent = currentBBox.west.toFixed(4);
     document.getElementById('rEast').textContent = currentBBox.east.toFixed(4);
-    refreshGenerateButton();
     if (map) {
       const bounds = L.latLngBounds([currentBBox.south, currentBBox.west], [currentBBox.north, currentBBox.east]);
       if (finalLayer) map.removeLayer(finalLayer);
       finalLayer = L.rectangle(bounds, { color: '#1B3A5C', weight: 2, fillOpacity: 0.08 }).addTo(map);
       map.fitBounds(bounds);
+      // Older saved projects may not have a selection_shape -- fall back to
+      // treating the saved bbox as a rectangle for the area calculation.
+      const shape = params.selectionShape || { type: 'rectangle' };
+      const area = params.areaM2 || (
+        metersBetween(currentBBox.south, currentBBox.west, currentBBox.south, currentBBox.east) *
+        metersBetween(currentBBox.south, currentBBox.west, currentBBox.north, currentBBox.west)
+      );
+      setSelection(bounds, shape.type, shape, area);
     }
   }
   switchTab('params');
@@ -997,16 +1012,53 @@ function metersBetween(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-function setBBoxFromBounds(bounds) {
+let currentSelectionShape = null;   // sent to the backend for accurate area validation
+let currentAreaM2 = 0;
+let currentPlanLimits = { maxAreaM2: 160000, isPro: false };  // updated from /me once logged in
+
+function polygonAreaM2(latlngs) {
+  if (latlngs.length < 3) return 0;
+  const lat0 = latlngs[0].lat;
+  const mPerDegLat = 111320;
+  const mPerDegLng = 111320 * Math.cos(lat0 * Math.PI / 180);
+  const pts = latlngs.map(p => [p.lng * mPerDegLng, p.lat * mPerDegLat]);
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % pts.length];
+    area += x1 * y2 - x2 * y1;
+  }
+  return Math.abs(area / 2);
+}
+
+function setSelection(bounds, shapeType, shapeData, areaM2) {
   currentBBox = { south: bounds.getSouth(), west: bounds.getWest(), north: bounds.getNorth(), east: bounds.getEast() };
+  currentSelectionShape = shapeData;
+  currentAreaM2 = areaM2;
   document.getElementById('rSouth').textContent = currentBBox.south.toFixed(4);
   document.getElementById('rNorth').textContent = currentBBox.north.toFixed(4);
   document.getElementById('rWest').textContent  = currentBBox.west.toFixed(4);
   document.getElementById('rEast').textContent  = currentBBox.east.toFixed(4);
-  const w = metersBetween(currentBBox.south, currentBBox.west, currentBBox.south, currentBBox.east);
-  const h = metersBetween(currentBBox.south, currentBBox.west, currentBBox.north, currentBBox.west);
-  document.getElementById('rSize').textContent = `${w.toFixed(0)} × ${h.toFixed(0)} m`;
+  document.getElementById('rSize').textContent = `${areaM2.toLocaleString('es-CL', {maximumFractionDigits: 0})} m²`;
+
+  const warnEl = document.getElementById('areaWarning');
+  if (areaM2 > currentPlanLimits.maxAreaM2) {
+    const maxKm2 = (currentPlanLimits.maxAreaM2 / 1_000_000).toFixed(2);
+    warnEl.textContent = currentPlanLimits.isPro
+      ? `El área supera el máximo de tu plan Pro (${maxKm2} km²). Achica la selección.`
+      : `El área supera el máximo del plan gratuito (${maxKm2} km²). Achica la selección o actualiza a PODIT Pro.`;
+    warnEl.style.display = 'block';
+  } else {
+    warnEl.style.display = 'none';
+  }
   refreshGenerateButton();
+}
+
+// Backwards-compatible wrapper for the rectangle tool (kept name since it's
+// referenced elsewhere for project loading).
+function setBBoxFromBounds(bounds) {
+  const w = metersBetween(bounds.getSouth(), bounds.getWest(), bounds.getSouth(), bounds.getEast());
+  const h = metersBetween(bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getWest());
+  setSelection(bounds, 'rectangle', { type: 'rectangle' }, w * h);
 }
 
 function clearDrawingLayers() {
@@ -1040,14 +1092,16 @@ function setShape(shape) {
     // tool is additive and must NOT clear the already-chosen site.
     if (finalLayer) { map.removeLayer(finalLayer); finalLayer = null; }
     currentBBox = null;
+    currentSelectionShape = null;
+    document.getElementById('areaWarning').style.display = 'none';
     refreshGenerateButton();
   }
 }
 
-function finishDrawing(bounds, shapeLayer) {
+function finishDrawing(bounds, shapeLayer, shapeType, shapeData, areaM2) {
   clearDrawingLayers();
   finalLayer = shapeLayer.addTo(map);
-  setBBoxFromBounds(bounds);
+  setSelection(bounds, shapeType, shapeData, areaM2);
   drawing = false;
   points = [];
   map.getContainer().style.cursor = '';
@@ -1077,7 +1131,10 @@ function initMap() {
         return;
       }
       const bounds = L.latLngBounds(points[0], e.latlng);
-      finishDrawing(bounds, L.rectangle(bounds, { color: '#1B3A5C', weight: 2, fillOpacity: 0.08 }));
+      const rectArea = metersBetween(bounds.getSouth(), bounds.getWest(), bounds.getSouth(), bounds.getEast())
+                      * metersBetween(bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getWest());
+      finishDrawing(bounds, L.rectangle(bounds, { color: '#1B3A5C', weight: 2, fillOpacity: 0.08 }),
+                    'rectangle', { type: 'rectangle' }, rectArea);
       return;
     }
 
@@ -1087,7 +1144,9 @@ function initMap() {
     if (currentShape === 'polygon') {
       if (points.length >= 3 && distPx(map, points[0], e.latlng) < 12) {
         const polygon = L.polygon(points, { color: '#1B3A5C', weight: 2, fillOpacity: 0.08 });
-        finishDrawing(polygon.getBounds(), polygon);
+        const polyArea = polygonAreaM2(points);
+        finishDrawing(polygon.getBounds(), polygon, 'polygon',
+                      { type: 'polygon', points: points.map(p => [p.lat, p.lng]) }, polyArea);
         return;
       }
       points.push(e.latlng);
@@ -1153,7 +1212,10 @@ function initMap() {
       return;
     }
     const circle = L.circle(circleCenter, { radius, color: '#1B3A5C', weight: 2, fillOpacity: 0.08 });
-    finishDrawing(circle.getBounds(), circle);
+    const circleArea = Math.PI * radius * radius;
+    finishDrawing(circle.getBounds(), circle, 'circle',
+                  { type: 'circle', center_lat: circleCenter.lat, center_lon: circleCenter.lng, radius_m: radius },
+                  circleArea);
   });
 
   map.on('mousemove', (e) => {
@@ -1224,7 +1286,10 @@ function refreshGenerateButton() {
   const btn = document.getElementById('generateBtn');
   const label = document.getElementById('btnLabel');
   if (btn.classList.contains('loading')) return; // don't override the spinner state
-  if (currentBBox) {
+  if (currentBBox && currentAreaM2 > currentPlanLimits.maxAreaM2) {
+    btn.disabled = true;
+    label.textContent = "Área demasiado grande para tu plan";
+  } else if (currentBBox) {
     btn.disabled = false;
     label.textContent = outputFormat === "dxf" ? "Generar planchas DXF" : "Generar modelo STL";
   } else {
@@ -1415,6 +1480,7 @@ async function handleGenerate() {
   const commonFields = {
     south: currentBBox.south, west: currentBBox.west,
     north: currentBBox.north, east: currentBBox.east,
+    selection_shape: currentSelectionShape,
     scale_denominator: scaleDenominator,
     include_streets: document.getElementById('includeStreets').checked,
     include_buildings: document.getElementById('includeBuildings').checked,
