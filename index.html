@@ -1253,6 +1253,10 @@ function renderLayoutTab(previewData, blobUrl) {
   content.style.display = 'block';
 
   const s = previewData.summary;
+  const buildingRows = s.num_building_stack_sheets
+    ? `<div><span>Planchas de edificios</span><span>${s.num_building_stack_sheets}</span></div>
+       <div><span>Capas de edificios (total)</span><span>${s.num_building_layers_total}</span></div>`
+    : '';
   let html = `
     <div class="layout-summary">
       <div class="summary-list">
@@ -1261,6 +1265,7 @@ function renderLayoutTab(previewData, blobUrl) {
         <div><span>Piezas totales</span><span>${s.num_parts_total}</span></div>
         <div><span>Fragmentos (tiling)</span><span>${s.num_parts_tiled_fragments}</span></div>
         <div><span>Planchas necesarias</span><span>${s.num_sheets}</span></div>
+        ${buildingRows}
       </div>
       ${s.street_building_warning ? `<div class="error-box" style="margin-top:10px;">${s.street_building_warning}</div>` : ''}
       <button class="download-btn" id="dlBtn" ${blobUrl ? '' : 'disabled'}>
@@ -1478,6 +1483,14 @@ async function handleGenerate() {
       const assemblyData = await assemblyResp.json();
       const blob = await generateResp.blob();
       const blobUrl = URL.createObjectURL(blob);
+
+      // /generate's own summary (in its response header) includes the
+      // building-extrusion-sheet counts, which /preview doesn't compute --
+      // merge that in so the results panel shows accurate numbers.
+      const generateSummaryHeader = generateResp.headers.get('X-Model-Summary');
+      if (generateSummaryHeader) {
+        Object.assign(previewData.summary, JSON.parse(generateSummaryHeader));
+      }
 
       renderLayoutTab(previewData, blobUrl);
       renderIsoTab(assemblyData);
