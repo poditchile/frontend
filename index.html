@@ -678,7 +678,7 @@
 // (Todos son valores PÚBLICOS, seguros de dejar en el código del navegador.)
 // ---------------------------------------------------------------------
 const API_BASE = window.TERRAZO_API_BASE || "https://podit-laser-maps-backend.onrender.com";
-const APP_VERSION = "5";
+const APP_VERSION = "6";
 document.addEventListener('DOMContentLoaded', () => {
   const vt = document.getElementById('versionTag');
   if (vt) vt.textContent = 'v' + APP_VERSION;
@@ -1594,7 +1594,7 @@ function initMap() {
     if (radius < 1) return;
     const circle = L.circle(circleCenter, { radius, color: '#1B3A5C', weight: 2, fillOpacity: 0.08 });
     const circleArea = Math.PI * radius * radius;
-    finishDrawing(circle.getBounds(), circle, 'circle',
+    finishDrawing(circleCenter.toBounds(radius * 2), circle, 'circle',
                   { type: 'circle', center_lat: circleCenter.lat, center_lon: circleCenter.lng, radius_m: radius },
                   circleArea);
     circleCenter = null;
