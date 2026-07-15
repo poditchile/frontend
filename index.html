@@ -488,7 +488,6 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="params" id="tabBtnParams" data-i18n="tab_params">Parámetros</button>
       <button class="tab-btn" data-tab="projects" id="tabBtnProjects" data-i18n="tab_projects">Mis proyectos</button>
-      <button class="tab-btn" data-tab="iso" id="tabBtnIso" data-i18n="tab_iso">Vista isométrica</button>
       <button class="tab-btn" data-tab="layout" id="tabBtnLayout" data-i18n="tab_layout">Planchas</button>
     </div>
 
@@ -503,20 +502,6 @@
       <div class="side-section" id="projectsListSection">
         <div id="projectsList" class="hint" data-i18n="loading">Cargando…</div>
       </div>
-    </div>
-
-    <!-- ===================== TAB: ISOMÉTRICA ===================== -->
-    <div class="tab-panel" id="tabIso" style="display:none;">
-      <div class="empty-panel" id="isoEmpty">
-        <svg viewBox="0 0 100 100" fill="none">
-          <path d="M50 20 L80 36 L50 52 L20 36 Z" stroke="#DEDACB" stroke-width="2"/>
-          <path d="M50 44 L74 57 L50 70 L26 57 Z" stroke="#1B3A5C" stroke-width="1.6" stroke-dasharray="3 3"/>
-          <path d="M50 62 L68 72 L50 82 L32 72 Z" stroke="#DEDACB" stroke-width="1.6"/>
-        </svg>
-        <div class="empty-title" data-i18n="iso_empty_title">Aún no hay vista isométrica</div>
-        <div class="empty-sub" data-i18n="iso_empty_sub">Genera un modelo para ver aquí cómo queda el terreno armado, capa por capa.</div>
-      </div>
-      <div id="isoContent" style="display:none;padding:18px;"></div>
     </div>
 
     <!-- ===================== TAB: PARÁMETROS ===================== -->
@@ -732,7 +717,7 @@ const I18N = {
     footer_rights: "© 2026 PODIT — Impresión 3D, corte láser y ploteo",
     footer_data: "Datos de elevación: Mapbox Terrain-RGB · Calles y edificios: OpenStreetMap",
     back_home: "← Inicio",
-    tab_params: "Parámetros", tab_projects: "Mis proyectos", tab_iso: "Vista isométrica", tab_layout: "Planchas",
+    tab_params: "Parámetros", tab_projects: "Mis proyectos", tab_layout: "Planchas",
     tab_layout_stl: "Resultado STL",
     search_placeholder: "Buscar ciudad o lugar…",
     hint_select_area: "Dibuja el terreno con rectángulo/círculo/polígono, y agrega edificios con altura manual con la herramienta 🏢 si OpenStreetMap no los tiene.",
@@ -761,10 +746,6 @@ const I18N = {
     hint_login_projects: "Inicia sesión para guardar y ver tus proyectos.",
     hint_no_projects: "Todavía no tienes proyectos guardados.", err_load_projects: "No se pudieron cargar tus proyectos.",
     btn_load: "Cargar", btn_delete: "Eliminar", confirm_delete_project: "¿Eliminar este proyecto?",
-    iso_empty_title: "Aún no hay vista isométrica",
-    iso_empty_sub: "Genera un modelo para ver aquí cómo queda el terreno armado, capa por capa.",
-    iso_no_layers: "No hay capas para mostrar.",
-    iso_caption: (n) => `Vista esquemática de cómo queda el terreno una vez armado (${n} capas, separación vertical exagerada para que se lea).`,
     layout_empty_title: "Aún no hay planchas generadas",
     layout_empty_sub: "Configura los parámetros y presiona \"Generar planchas\" para ver aquí cómo quedan distribuidas las piezas.",
     plan_free_badge: "Plan gratuito · 5 modelos/mes",
@@ -832,7 +813,7 @@ const I18N = {
     footer_rights: "© 2026 PODIT — 3D printing, laser cutting and plotting",
     footer_data: "Elevation data: Mapbox Terrain-RGB · Streets and buildings: OpenStreetMap",
     back_home: "← Home",
-    tab_params: "Parameters", tab_projects: "My projects", tab_iso: "Isometric view", tab_layout: "Sheets",
+    tab_params: "Parameters", tab_projects: "My projects", tab_layout: "Sheets",
     tab_layout_stl: "STL Result",
     search_placeholder: "Search city or place…",
     hint_select_area: "Draw the site with a rectangle/circle/polygon, and add manually-sized buildings with the 🏢 tool if OpenStreetMap is missing them.",
@@ -861,10 +842,6 @@ const I18N = {
     hint_login_projects: "Log in to save and view your projects.",
     hint_no_projects: "You don't have any saved projects yet.", err_load_projects: "Couldn't load your projects.",
     btn_load: "Load", btn_delete: "Delete", confirm_delete_project: "Delete this project?",
-    iso_empty_title: "No isometric view yet",
-    iso_empty_sub: "Generate a model to see here how the terrain looks assembled, layer by layer.",
-    iso_no_layers: "No layers to show.",
-    iso_caption: (n) => `Schematic view of the assembled terrain (${n} layers, vertical spacing exaggerated for legibility).`,
     layout_empty_title: "No sheets generated yet",
     layout_empty_sub: "Set your parameters and press \"Generate sheets\" to see how the pieces are laid out.",
     plan_free_badge: "Free plan · 5 models/month",
@@ -953,17 +930,14 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
 function switchTab(name) {
   document.getElementById('tabBtnParams').classList.toggle('active', name === 'params');
   document.getElementById('tabBtnProjects').classList.toggle('active', name === 'projects');
-  document.getElementById('tabBtnIso').classList.toggle('active', name === 'iso');
   document.getElementById('tabBtnLayout').classList.toggle('active', name === 'layout');
   document.getElementById('tabParams').style.display = name === 'params' ? 'flex' : 'none';
   document.getElementById('tabProjects').style.display = name === 'projects' ? 'flex' : 'none';
-  document.getElementById('tabIso').style.display = name === 'iso' ? 'flex' : 'none';
   document.getElementById('tabLayout').style.display = name === 'layout' ? 'flex' : 'none';
   if (name === 'projects') loadProjectsList();
 }
 document.getElementById('tabBtnParams').onclick = () => switchTab('params');
 document.getElementById('tabBtnProjects').onclick = () => switchTab('projects');
-document.getElementById('tabBtnIso').onclick = () => switchTab('iso');
 document.getElementById('tabBtnLayout').onclick = () => switchTab('layout');
 
 // ---------------------------------------------------------------------
@@ -1224,48 +1198,39 @@ async function loadProjectsList() {
 
 function applyProjectParams(params) {
   if (!params) return;
-  if (params.scale) document.getElementById('scale').value = params.scale;
-  if (params.scaleCustom) document.getElementById('scaleCustom').value = params.scaleCustom;
-  if (params.sheetW) document.getElementById('sheetW').value = params.sheetW;
-  if (params.sheetH) document.getElementById('sheetH').value = params.sheetH;
-  if (params.thickness) document.getElementById('thickness').value = params.thickness;
-  document.getElementById('includeStreets').checked = !!params.includeStreets;
-  document.getElementById('includeBuildings').checked = !!params.includeBuildings;
-  if (params.defaultBuildingHeightM) document.getElementById('defaultBuildingHeightM').value = params.defaultBuildingHeightM;
-  if (params.labelTextHeightM) document.getElementById('labelTextHeightM').value = params.labelTextHeightM;
-  if (params.streetWidthM) document.getElementById('streetWidthM').value = params.streetWidthM;
-  if (params.streetRaiseMm) document.getElementById('streetRaiseMm').value = params.streetRaiseMm;
-  if (params.outputFormat) setFormat(params.outputFormat);
-  manualBuildings = params.manualBuildings || [];
-  document.getElementById('manualBuildingsCount').textContent = manualBuildings.length;
-  // The array survives a save/reload just fine, but the polygons themselves
-  // were never redrawn on the map -- without this, a student adding
-  // buildings one-by-one over several sessions couldn't see which parts of
-  // the site they'd already covered after reopening the project.
-  manualBuildingLayers.forEach(l => map && map.removeLayer(l));
-  manualBuildingLayers = [];
-  if (map) {
-    manualBuildings.forEach(b => {
-      const latlngs = b.points.map(p => [p[0], p[1]]);
-      const layer = L.polygon(latlngs, { color: '#2A6F97', weight: 2, fillOpacity: 0.18 })
-        .bindTooltip(`${b.height_m} m`, { permanent: true, direction: 'center', className: 'building-tooltip' })
-        .addTo(map);
-      manualBuildingLayers.push(layer);
-    });
+  try {
+    if (params.scale) document.getElementById('scale').value = params.scale;
+    if (params.scaleCustom) document.getElementById('scaleCustom').value = params.scaleCustom;
+    if (params.sheetW) document.getElementById('sheetW').value = params.sheetW;
+    if (params.sheetH) document.getElementById('sheetH').value = params.sheetH;
+    if (params.thickness) document.getElementById('thickness').value = params.thickness;
+    document.getElementById('includeStreets').checked = !!params.includeStreets;
+    document.getElementById('includeBuildings').checked = !!params.includeBuildings;
+    if (params.defaultBuildingHeightM) document.getElementById('defaultBuildingHeightM').value = params.defaultBuildingHeightM;
+    if (params.labelTextHeightM) document.getElementById('labelTextHeightM').value = params.labelTextHeightM;
+    if (params.streetWidthM) document.getElementById('streetWidthM').value = params.streetWidthM;
+    if (params.streetRaiseMm) document.getElementById('streetRaiseMm').value = params.streetRaiseMm;
+    if (params.outputFormat) setFormat(params.outputFormat);
+  } catch (e) {
+    console.error('applyProjectParams: failed restoring basic fields', e);
   }
-  if (params.bbox) {
-    currentBBox = params.bbox;
-    document.getElementById('rSouth').textContent = currentBBox.south.toFixed(4);
-    document.getElementById('rNorth').textContent = currentBBox.north.toFixed(4);
-    document.getElementById('rWest').textContent = currentBBox.west.toFixed(4);
-    document.getElementById('rEast').textContent = currentBBox.east.toFixed(4);
-    if (map) {
+
+  // Restore the site selection FIRST and independently of manual buildings --
+  // a single malformed building entry used to throw here and silently abort
+  // the whole function before ever reaching this part, which looked exactly
+  // like "load does nothing" even though the project data was fine.
+  try {
+    if (params.bbox && map) {
+      currentBBox = params.bbox;
+      document.getElementById('rSouth').textContent = currentBBox.south.toFixed(4);
+      document.getElementById('rNorth').textContent = currentBBox.north.toFixed(4);
+      document.getElementById('rWest').textContent = currentBBox.west.toFixed(4);
+      document.getElementById('rEast').textContent = currentBBox.east.toFixed(4);
       const bounds = L.latLngBounds([currentBBox.south, currentBBox.west], [currentBBox.north, currentBBox.east]);
       if (finalLayer) map.removeLayer(finalLayer);
       finalLayer = L.rectangle(bounds, { color: '#1B3A5C', weight: 2, fillOpacity: 0.08 }).addTo(map);
       map.fitBounds(bounds);
-      // Older saved projects may not have a selection_shape -- fall back to
-      // treating the saved bbox as a rectangle for the area calculation.
+      map.invalidateSize();
       const shape = params.selectionShape || { type: 'rectangle' };
       const area = params.areaM2 || (
         metersBetween(currentBBox.south, currentBBox.west, currentBBox.south, currentBBox.east) *
@@ -1273,7 +1238,32 @@ function applyProjectParams(params) {
       );
       setSelection(bounds, shape.type, shape, area);
     }
+  } catch (e) {
+    console.error('applyProjectParams: failed restoring site/area', e);
+    alert('El proyecto se cargó, pero hubo un problema restaurando el área en el mapa. Revisa la consola.');
   }
+
+  // Manual buildings: guard each entry individually so one malformed
+  // building can't break the rest.
+  try {
+    manualBuildings = Array.isArray(params.manualBuildings) ? params.manualBuildings : [];
+    document.getElementById('manualBuildingsCount').textContent = manualBuildings.length;
+    manualBuildingLayers.forEach(l => map && map.removeLayer(l));
+    manualBuildingLayers = [];
+    if (map) {
+      manualBuildings.forEach(b => {
+        if (!b || !Array.isArray(b.points) || b.points.length < 3) return;
+        const latlngs = b.points.map(p => [p[0], p[1]]);
+        const layer = L.polygon(latlngs, { color: '#2A6F97', weight: 2, fillOpacity: 0.18 })
+          .bindTooltip(`${b.height_m || '?'} m`, { permanent: true, direction: 'center', className: 'building-tooltip' })
+          .addTo(map);
+        manualBuildingLayers.push(layer);
+      });
+    }
+  } catch (e) {
+    console.error('applyProjectParams: failed restoring manual buildings', e);
+  }
+
   switchTab('params');
 }
 
@@ -1515,6 +1505,7 @@ function initMap() {
   }).addTo(map);
   setTimeout(() => map.invalidateSize(), 0);
   window.addEventListener('resize', () => map.invalidateSize());
+  setShape('rectangle'); // the toolbar shows rectangle as active by default -- actually arm it too
 
   map.on('click', (e) => {
     if (!drawing) return;
@@ -1684,7 +1675,6 @@ function setFormat(fmt) {
   document.getElementById('sheetWLabel').textContent = fmt === "dxf" ? t('lbl_sheet_w') : t('lbl_bed_w');
   document.getElementById('sheetHLabel').textContent = fmt === "dxf" ? t('lbl_sheet_h') : t('lbl_bed_h');
   document.getElementById('plateHint').textContent = fmt === "dxf" ? t('hint_plate_dxf') : t('hint_plate_stl');
-  document.getElementById('tabBtnIso').style.display = fmt === "dxf" ? 'block' : 'none';
   document.getElementById('tabBtnLayout').textContent = fmt === "dxf" ? t('tab_layout') : t('tab_layout_stl');
   document.getElementById('stlStreetFields').style.display = fmt === "stl" ? 'block' : 'none';
   refreshGenerateButton();
@@ -1798,85 +1788,6 @@ function resetLayoutTab() {
 }
 
 // ---------------------------------------------------------------------
-// Vista isométrica tab: schematic isometric projection of the stacked
-// layers as they'll look once assembled (independent of how pieces get
-// tiled/nested onto sheets).
-// ---------------------------------------------------------------------
-function lerpColor(hexA, hexB, t) {
-  const a = [1, 3, 5].map(i => parseInt(hexA.slice(i, i + 2), 16));
-  const b = [1, 3, 5].map(i => parseInt(hexB.slice(i, i + 2), 16));
-  const c = a.map((v, i) => Math.round(v + (b[i] - v) * t));
-  return `rgb(${c.join(',')})`;
-}
-
-function renderIsoTab(assemblyData) {
-  document.getElementById('isoEmpty').style.display = 'none';
-  const content = document.getElementById('isoContent');
-  content.style.display = 'block';
-
-  const layers = assemblyData.layers;
-  if (!layers.length) {
-    content.innerHTML = `<div class="hint">${t('iso_no_layers')}</div>`;
-    return;
-  }
-
-  // Physical layer thickness is often only a few mm -- too thin to read as
-  // a stack. Exaggerate the vertical spacing purely for this schematic
-  // preview (does not affect the real DXF/model dimensions).
-  const gap = assemblyData.material_thickness_mm * 6;
-  const cos30 = Math.cos(Math.PI / 6), sin30 = Math.sin(Math.PI / 6);
-  const project = (x, y, z) => [(x - y) * cos30, (x + y) * sin30 - z];
-
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  const shapes = [];
-  layers.forEach((layer, i) => {
-    const z = i * gap;
-    const t = layers.length > 1 ? i / (layers.length - 1) : 0;
-    const fill = lerpColor('#D6E0EA', '#1B3A5C', t * 0.55);
-
-    for (const shelf of layer.shelves) {
-      const extPts = shelf.exterior.map(([x, y]) => project(x, y, z));
-      extPts.forEach(([px, py]) => {
-        minX = Math.min(minX, px); maxX = Math.max(maxX, px);
-        minY = Math.min(minY, py); maxY = Math.max(maxY, py);
-      });
-      let d = `M ${extPts.map(p => p.join(',')).join(' L ')} Z`;
-      for (const hole of shelf.holes) {
-        const hPts = hole.map(([x, y]) => project(x, y, z));
-        d += ` M ${hPts.map(p => p.join(',')).join(' L ')} Z`;
-      }
-      shapes.push({ d, fill, z });
-    }
-  });
-
-  // Painter's algorithm: draw lower shelves first so higher ones (which
-  // are visually "in front" in this projection) draw on top correctly.
-  shapes.sort((a, b) => a.z - b.z);
-
-  const pad = Math.max((maxX - minX), (maxY - minY)) * 0.08 + 10;
-  const vbX = minX - pad, vbY = minY - pad;
-  const vbW = (maxX - minX) + pad * 2, vbH = (maxY - minY) + pad * 2;
-
-  const pathsSvg = shapes.map(s =>
-    `<path d="${s.d}" fill="${s.fill}" stroke="#2A2822" stroke-width="${Math.max(vbW, vbH) * 0.002}" fill-rule="evenodd"/>`
-  ).join('');
-
-  content.innerHTML = `
-    <p class="hint" style="margin-bottom:12px;">${t('iso_caption', layers.length)}</p>
-    <div class="sheet-svg-wrap">
-      <svg viewBox="${vbX} ${vbY} ${vbW} ${vbH}" style="transform:scaleY(-1);">
-        ${pathsSvg}
-      </svg>
-    </div>`;
-}
-
-function resetIsoTab() {
-  document.getElementById('isoEmpty').style.display = 'flex';
-  document.getElementById('isoContent').style.display = 'none';
-  document.getElementById('isoContent').innerHTML = '';
-}
-
-// ---------------------------------------------------------------------
 // Generate flow: /preview (layout) + /generate (zip) in parallel
 // ---------------------------------------------------------------------
 function showError(message) {
@@ -1893,7 +1804,6 @@ async function handleGenerate() {
   clearError();
   setButtonLoading(true);
   resetLayoutTab();
-  resetIsoTab();
 
   const scaleDenominator = getScaleDenominator();
   const commonFields = {
@@ -1949,13 +1859,11 @@ async function handleGenerate() {
         material_thickness_mm: parseFloat(document.getElementById('thickness').value),
         assembly_mode: ASSEMBLY_MODE,
       };
-      const [previewResp, assemblyResp, generateResp] = await Promise.all([
+      const [previewResp, generateResp] = await Promise.all([
         postJSON('/preview', dxfPayload),
-        postJSON('/preview-assembly', dxfPayload),
         postJSON('/generate', dxfPayload),
       ]);
       const previewData = await previewResp.json();
-      const assemblyData = await assemblyResp.json();
       const blob = await generateResp.blob();
       const blobUrl = URL.createObjectURL(blob);
 
@@ -1968,8 +1876,7 @@ async function handleGenerate() {
       }
 
       renderLayoutTab(previewData, blobUrl);
-      renderIsoTab(assemblyData);
-      switchTab('iso');
+      switchTab('layout');
     }
   } catch (e) {
     const msg = (e instanceof TypeError)
