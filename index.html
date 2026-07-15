@@ -117,6 +117,9 @@
   .land-nav-links a{color:var(--ink);text-decoration:none;}
   .land-nav-links a:hover{color:var(--accent);}
   .land-nav-btn{width:auto !important;}
+  .lang-switch{display:flex;border:1px solid var(--line);border-radius:20px;overflow:hidden;}
+  .lang-btn{border:none;background:var(--panel);padding:5px 10px;font-family:'IBM Plex Mono',monospace;font-size:0.7rem;font-weight:600;cursor:pointer;color:var(--ink-soft);}
+  .lang-btn.active{background:var(--accent);color:#fff;}
 
   .hero{display:flex;align-items:center;gap:60px;padding:80px 60px;max-width:1180px;margin:0 auto;}
   .hero-copy{flex:1;min-width:0;}
@@ -305,31 +308,35 @@
       <span class="brand-name">PODIT Laser and 3D Maps</span>
     </div>
     <div class="land-nav-links">
-      <a href="#features">Qué incluye</a>
-      <a href="#howitworks">Cómo funciona</a>
-      <a href="#pricing">Precios</a>
-      <button class="ghost-btn land-nav-btn" id="loginBtn">Iniciar sesión</button>
-      <button class="cta land-nav-btn" id="signupBtn" style="margin:0;width:auto;padding:10px 18px;">Registrarse</button>
+      <a href="#features" data-i18n="features_eyebrow">Qué incluye</a>
+      <a href="#howitworks" data-i18n="nav_how">Cómo funciona</a>
+      <a href="#pricing" data-i18n="nav_pricing">Precios</a>
+      <div class="lang-switch">
+        <button class="lang-btn" data-lang="es">ES</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+      </div>
+      <button class="ghost-btn land-nav-btn" id="loginBtn" data-i18n="nav_login">Iniciar sesión</button>
+      <button class="cta land-nav-btn" id="signupBtn" style="margin:0;width:auto;padding:10px 18px;" data-i18n="nav_signup">Registrarse</button>
     </div>
   </nav>
 
   <section class="hero">
     <div class="hero-copy">
-      <p class="eyebrow">terreno real → listo para cortar o imprimir</p>
-      <h1>De cualquier lugar del mapa a una maqueta física, en minutos.</h1>
-      <p class="hero-sub">PODIT Laser and 3D Maps descarga la elevación real de tu sitio -- con sus calles y edificios -- y arma el modelo por ti: planchas DXF numeradas para corte láser, o un STL listo para tu impresora 3D.</p>
+      <p class="eyebrow" data-i18n="hero_eyebrow">terreno real → listo para cortar o imprimir</p>
+      <h1 data-i18n="hero_title">De cualquier lugar del mapa a una maqueta física, en minutos.</h1>
+      <p class="hero-sub" data-i18n="hero_sub">PODIT Laser and 3D Maps descarga la elevación real de tu sitio -- con sus calles y edificios -- y arma el modelo por ti: planchas DXF numeradas para corte láser, o un STL listo para tu impresora 3D.</p>
       <div class="hero-ctas">
-        <button class="cta" id="heroStartBtn" style="width:auto;padding:14px 26px;">Empezar gratis</button>
-        <a href="#howitworks" class="ghost-btn" style="width:auto;padding:14px 22px;display:inline-flex;align-items:center;">Ver cómo funciona</a>
+        <button class="cta" id="heroStartBtn" style="width:auto;padding:14px 26px;" data-i18n="hero_cta_start">Empezar gratis</button>
+        <a href="#howitworks" class="ghost-btn" style="width:auto;padding:14px 22px;display:inline-flex;align-items:center;" data-i18n="hero_cta_how">Ver cómo funciona</a>
       </div>
       <div class="trust-bar">
-        <span>Un producto de <b>PODIT</b></span>
+        <span data-i18n="trust_brand">Un producto de</span> <b>PODIT</b>
         <span class="trust-dot">·</span>
-        <span>Impresión 3D</span>
+        <span data-i18n="trust_3d">Impresión 3D</span>
         <span class="trust-dot">·</span>
-        <span>Corte láser</span>
+        <span data-i18n="trust_laser">Corte láser</span>
         <span class="trust-dot">·</span>
-        <span>Ploteo</span>
+        <span data-i18n="trust_plot">Ploteo</span>
       </div>
     </div>
     <div class="hero-art">
@@ -343,89 +350,89 @@
     <div class="features-grid">
       <div class="feature-card">
         <svg viewBox="0 0 48 48" fill="none"><path d="M24 6 L40 15 L24 24 L8 15 Z" stroke="#1B3A5C" stroke-width="1.8"/><path d="M24 17 L34 22.6 L24 28 L14 22.6 Z" stroke="#2A2822" stroke-width="1.6"/><path d="M24 26 L30 29.2 L24 32 L18 29.2 Z" stroke="#2A2822" stroke-width="1.6"/></svg>
-        <h3>Topografía real</h3>
-        <p>Elevación real del terreno (Mapbox Terrain-RGB), no una aproximación -- curvas de nivel suaves cada tantos metros, a la escala que definas.</p>
+        <h3 data-i18n="feat1_title">Topografía real</h3>
+        <p data-i18n="feat1_body">Elevación real del terreno (Mapbox Terrain-RGB), no una aproximación -- curvas de nivel suaves cada tantos metros, a la escala que definas.</p>
       </div>
       <div class="feature-card">
         <svg viewBox="0 0 48 48" fill="none"><path d="M8 38 L40 10" stroke="#2A2822" stroke-width="2" stroke-dasharray="4 3"/><rect x="26" y="14" width="12" height="12" fill="#D6E0EA" stroke="#2A2822" stroke-width="1.6"/><rect x="10" y="26" width="9" height="9" fill="#AFC4D8" stroke="#2A2822" stroke-width="1.6"/></svg>
-        <h3>Calles y edificios</h3>
-        <p>Trae nombres de calles y alturas de edificios desde OpenStreetMap, y agrega a mano los que falten con su altura real.</p>
+        <h3 data-i18n="feat2_title">Calles y edificios</h3>
+        <p data-i18n="feat2_body">Trae nombres de calles y alturas de edificios desde OpenStreetMap, y agrega a mano los que falten con su altura real.</p>
       </div>
       <div class="feature-card">
         <svg viewBox="0 0 48 48" fill="none"><rect x="8" y="8" width="32" height="22" rx="1" stroke="#DEDACB" stroke-width="2"/><path d="M14 26 L22 14 L27 20 L34 12" stroke="#1B3A5C" stroke-width="1.8" stroke-dasharray="3 3"/><rect x="6" y="34" width="36" height="4" fill="#2A2822"/></svg>
-        <h3>Corte láser (DXF)</h3>
-        <p>Planchas numeradas y anidadas, con costuras y guías de ensamble cuando una pieza no cabe entera en tu plancha.</p>
+        <h3 data-i18n="feat3_title">Corte láser (DXF)</h3>
+        <p data-i18n="feat3_body">Planchas numeradas y anidadas, con costuras y guías de ensamble cuando una pieza no cabe entera en tu plancha.</p>
       </div>
       <div class="feature-card">
         <svg viewBox="0 0 48 48" fill="none"><path d="M24 8 L38 16 L38 32 L24 40 L10 32 L10 16 Z" stroke="#2A2822" stroke-width="1.8" fill="none"/><path d="M24 8 L24 24 L38 32 M24 24 L10 32" stroke="#1B3A5C" stroke-width="1.6"/></svg>
-        <h3>Impresión 3D (STL)</h3>
-        <p>Malla real a escala, calles extruidas y edificios con su altura -- lista para tu slicer, con el tamaño de tu cama ya considerado.</p>
+        <h3 data-i18n="feat4_title">Impresión 3D (STL)</h3>
+        <p data-i18n="feat4_body">Malla real a escala, calles extruidas y edificios con su altura -- lista para tu slicer, con el tamaño de tu cama ya considerado.</p>
       </div>
     </div>
   </section>
 
   <section class="howitworks" id="howitworks">
-    <p class="eyebrow" style="text-align:center;">Cómo funciona</p>
-    <h2 class="section-title">Cuatro pasos, un archivo listo para fabricar</h2>
+    <p class="eyebrow" style="text-align:center;" data-i18n="how_eyebrow">Cómo funciona</p>
+    <h2 class="section-title" data-i18n="how_title">Cuatro pasos, un archivo listo para fabricar</h2>
     <div class="steps-grid steps-grid-4">
       <div class="step-card">
         <svg viewBox="0 0 60 60" fill="none"><rect x="10" y="10" width="40" height="30" rx="1" stroke="#DEDACB" stroke-width="2"/><path d="M18 34 L28 20 L34 28 L42 16" stroke="#1B3A5C" stroke-width="2" stroke-dasharray="3 3"/></svg>
-        <h3>1. Dibuja tu sitio</h3>
-        <p>Rectángulo, círculo o un polígono a mano -- lo que sea más cómodo para tu terreno.</p>
+        <h3 data-i18n="how1_title">1. Dibuja tu sitio</h3>
+        <p data-i18n="how1_body">Rectángulo, círculo o un polígono a mano -- lo que sea más cómodo para tu terreno.</p>
       </div>
       <div class="step-card">
         <svg viewBox="0 0 60 60" fill="none"><rect x="12" y="20" width="10" height="20" fill="#D6E0EA" stroke="#2A2822" stroke-width="1.6"/><rect x="26" y="14" width="10" height="26" fill="#AFC4D8" stroke="#2A2822" stroke-width="1.6"/><rect x="40" y="24" width="8" height="16" fill="#D6E0EA" stroke="#2A2822" stroke-width="1.6"/></svg>
-        <h3>2. Completa edificios</h3>
-        <p>Marca calles/edificios de OSM, o agrega a mano los que falten con su altura.</p>
+        <h3 data-i18n="how2_title">2. Completa edificios</h3>
+        <p data-i18n="how2_body">Marca calles/edificios de OSM, o agrega a mano los que falten con su altura.</p>
       </div>
       <div class="step-card">
         <svg viewBox="0 0 60 60" fill="none"><rect x="14" y="14" width="14" height="32" rx="1" fill="#D6E0EA" stroke="#2A2822" stroke-width="1.6"/><rect x="32" y="22" width="14" height="24" rx="1" fill="#AFC4D8" stroke="#2A2822" stroke-width="1.6"/></svg>
-        <h3>3. Escala y salida</h3>
-        <p>Elige la escala, el tamaño de plancha/cama, y si quieres DXF o STL.</p>
+        <h3 data-i18n="how3_title">3. Escala y salida</h3>
+        <p data-i18n="how3_body">Elige la escala, el tamaño de plancha/cama, y si quieres DXF o STL.</p>
       </div>
       <div class="step-card">
         <svg viewBox="0 0 60 60" fill="none"><path d="M18 40 L18 20 L30 12 L42 20 L42 40 Z" stroke="#2A2822" stroke-width="1.8" fill="none"/><path d="M18 20 L42 20 M18 30 L42 30" stroke="#1B3A5C" stroke-width="1.6"/></svg>
-        <h3>4. Descarga y fabrica</h3>
-        <p>Planchas DXF numeradas, o tu STL -- listo para el láser o la impresora.</p>
+        <h3 data-i18n="how4_title">4. Descarga y fabrica</h3>
+        <p data-i18n="how4_body">Planchas DXF numeradas, o tu STL -- listo para el láser o la impresora.</p>
       </div>
     </div>
   </section>
 
   <section class="pricing" id="pricing">
-    <p class="eyebrow" style="text-align:center;">Precios</p>
-    <h2 class="section-title">Empieza gratis, crece cuando lo necesites</h2>
+    <p class="eyebrow" style="text-align:center;" data-i18n="pricing_eyebrow">Precios</p>
+    <h2 class="section-title" data-i18n="pricing_title">Empieza gratis, crece cuando lo necesites</h2>
     <div class="pricing-grid">
       <div class="price-card">
-        <h3>Gratis</h3>
+        <h3 data-i18n="price_free_name">Gratis</h3>
         <p class="price">$0<span>/mes</span></p>
-        <p class="hint">Para probar y proyectos chicos.</p>
+        <p class="hint" data-i18n="price_free_sub">Para probar y proyectos chicos.</p>
         <ul>
-          <li>5 modelos por mes</li>
-          <li>Hasta 0,16 km² por sitio</li>
-          <li>DXF y STL</li>
-          <li>Calles y edificios de OSM</li>
+          <li data-i18n="price_free_li1">5 modelos por mes</li>
+          <li data-i18n="price_free_li2">Hasta 0,16 km² por sitio</li>
+          <li data-i18n="price_free_li3">DXF y STL</li>
+          <li data-i18n="price_free_li4">Calles y edificios de OSM</li>
         </ul>
-        <button class="ghost-btn" style="width:100%;" id="pricingFreeBtn">Empezar gratis</button>
+        <button class="ghost-btn" style="width:100%;" id="pricingFreeBtn" data-i18n="price_free_cta">Empezar gratis</button>
       </div>
       <div class="price-card price-card-featured">
-        <p class="price-badge">Más elegido</p>
-        <h3>PODIT Pro</h3>
+        <p class="price-badge" data-i18n="price_pro_badge">Más elegido</p>
+        <h3 data-i18n="price_pro_name">PODIT Pro</h3>
         <p class="price">$3<span>USD/mes</span></p>
-        <p class="hint">Para uso frecuente y sitios más grandes.</p>
+        <p class="hint" data-i18n="price_pro_sub">Para uso frecuente y sitios más grandes.</p>
         <ul>
-          <li>15 modelos por mes</li>
-          <li>Hasta 1,0 km² por sitio</li>
-          <li>Mismas capacidades técnicas</li>
-          <li>Soporte prioritario</li>
+          <li data-i18n="price_pro_li1">15 modelos por mes</li>
+          <li data-i18n="price_pro_li2">Hasta 1,0 km² por sitio</li>
+          <li data-i18n="price_pro_li3">Mismas capacidades técnicas</li>
+          <li data-i18n="price_pro_li4">Soporte prioritario</li>
         </ul>
-        <button class="cta" style="width:100%;" id="pricingProBtn">Empezar prueba</button>
+        <button class="cta" style="width:100%;" id="pricingProBtn" data-i18n="price_pro_cta">Empezar prueba</button>
       </div>
     </div>
   </section>
 
   <footer class="land-footer">
-    <span>© 2026 PODIT — Impresión 3D, corte láser y ploteo</span>
-    <span>Datos de elevación: Mapbox Terrain-RGB · Calles y edificios: OpenStreetMap</span>
+    <span data-i18n="footer_rights">© 2026 PODIT — Impresión 3D, corte láser y ploteo</span>
+    <span data-i18n="footer_data">Datos de elevación: Mapbox Terrain-RGB · Calles y edificios: OpenStreetMap</span>
   </footer>
 </div>
 
@@ -442,15 +449,19 @@
     <span class="brand-tag">by PODIT</span>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
-    <button class="ghost-btn" id="backToLandingBtn" style="width:auto;padding:7px 14px;margin:0;">← Inicio</button>
+    <div class="lang-switch">
+      <button class="lang-btn" data-lang="es">ES</button>
+      <button class="lang-btn" data-lang="en">EN</button>
+    </div>
+    <button class="ghost-btn" id="backToLandingBtn" style="width:auto;padding:7px 14px;margin:0;" data-i18n="back_home">← Inicio</button>
     <div style="position:relative;">
-      <button class="plan-pill" id="accountBadge" style="cursor:pointer;border:1px solid var(--line);background:var(--panel);">Cargando…</button>
+      <button class="plan-pill" id="accountBadge" style="cursor:pointer;border:1px solid var(--line);background:var(--panel);" data-i18n="loading">Cargando…</button>
       <div id="accountMenu" class="account-menu" style="display:none;">
         <div class="account-menu-email" id="accountMenuEmail">—</div>
         <div class="account-menu-plan" id="accountMenuPlan">—</div>
-        <button class="ghost-btn" id="upgradeBtn" style="width:100%;margin-top:8px;">Actualizar a PODIT Pro</button>
-        <button class="ghost-btn" id="manageSubBtn" style="width:100%;margin-top:8px;display:none;">Gestionar suscripción</button>
-        <button class="ghost-btn" id="logoutBtn" style="width:100%;margin-top:8px;">Cerrar sesión</button>
+        <button class="ghost-btn" id="upgradeBtn" style="width:100%;margin-top:8px;" data-i18n="btn_upgrade">Actualizar a PODIT Pro</button>
+        <button class="ghost-btn" id="manageSubBtn" style="width:100%;margin-top:8px;display:none;" data-i18n="btn_manage_sub">Gestionar suscripción</button>
+        <button class="ghost-btn" id="logoutBtn" style="width:100%;margin-top:8px;" data-i18n="btn_logout">Cerrar sesión</button>
       </div>
     </div>
   </div>
@@ -460,37 +471,37 @@
   <div style="position:relative;flex:1;min-width:0;">
     <div id="map"></div>
     <div class="map-search-box">
-      <input type="text" id="placeSearchInput" placeholder="Buscar ciudad o lugar…" autocomplete="off">
+      <input type="text" id="placeSearchInput" placeholder="Buscar ciudad o lugar…" autocomplete="off" data-i18n-placeholder="search_placeholder">
       <button type="button" id="placeSearchBtn" title="Buscar">🔍</button>
       <div id="placeSearchResults" class="place-search-results" style="display:none;"></div>
     </div>
     <div class="draw-toolbar" id="drawToolbar">
-      <button type="button" class="draw-tool-btn active" data-shape="rectangle" title="Rectángulo">▭</button>
-      <button type="button" class="draw-tool-btn" data-shape="circle" title="Círculo">◯</button>
-      <button type="button" class="draw-tool-btn" data-shape="polygon" title="Polígono">⬠</button>
-      <button type="button" class="draw-tool-btn" data-shape="building" title="Agregar edificio (altura manual)">🏢</button>
+      <button type="button" class="draw-tool-btn active" data-shape="rectangle" data-i18n-title="tool_rect" title="Rectángulo">▭</button>
+      <button type="button" class="draw-tool-btn" data-shape="circle" data-i18n-title="tool_circle" title="Círculo">◯</button>
+      <button type="button" class="draw-tool-btn" data-shape="polygon" data-i18n-title="tool_polygon" title="Polígono">⬠</button>
+      <button type="button" class="draw-tool-btn" data-shape="building" data-i18n-title="tool_building" title="Agregar edificio (altura manual)">🏢</button>
     </div>
-    <div class="draw-hint" id="drawHint">Dibuja un rectángulo sobre el sitio que quieres modelar</div>
+    <div class="draw-hint" id="drawHint" data-i18n="hint_rect">Dibuja un rectángulo sobre el sitio que quieres modelar</div>
   </div>
 
   <aside>
     <div class="tabs">
-      <button class="tab-btn active" data-tab="params" id="tabBtnParams">Parámetros</button>
-      <button class="tab-btn" data-tab="projects" id="tabBtnProjects">Mis proyectos</button>
-      <button class="tab-btn" data-tab="iso" id="tabBtnIso">Vista isométrica</button>
-      <button class="tab-btn" data-tab="layout" id="tabBtnLayout">Planchas</button>
+      <button class="tab-btn active" data-tab="params" id="tabBtnParams" data-i18n="tab_params">Parámetros</button>
+      <button class="tab-btn" data-tab="projects" id="tabBtnProjects" data-i18n="tab_projects">Mis proyectos</button>
+      <button class="tab-btn" data-tab="iso" id="tabBtnIso" data-i18n="tab_iso">Vista isométrica</button>
+      <button class="tab-btn" data-tab="layout" id="tabBtnLayout" data-i18n="tab_layout">Planchas</button>
     </div>
 
     <!-- ===================== TAB: MIS PROYECTOS ===================== -->
     <div class="tab-panel" id="tabProjects" style="display:none;">
       <div class="side-section">
-        <p class="eyebrow">Proyectos guardados</p>
-        <h2>Mis proyectos</h2>
-        <p class="hint">Guarda los parámetros del sitio actual para volver a generarlo después.</p>
+        <p class="eyebrow" data-i18n="projects_eyebrow">Proyectos guardados</p>
+        <h2 data-i18n="h_projects">Mis proyectos</h2>
+        <p class="hint" data-i18n="hint_projects">Guarda los parámetros del sitio actual para volver a generarlo después.</p>
         <button type="button" class="ghost-btn" id="saveProjectBtn" style="margin-top:10px;">💾 Guardar proyecto actual</button>
       </div>
       <div class="side-section" id="projectsListSection">
-        <div id="projectsList" class="hint">Cargando…</div>
+        <div id="projectsList" class="hint" data-i18n="loading">Cargando…</div>
       </div>
     </div>
 
@@ -502,8 +513,8 @@
           <path d="M50 44 L74 57 L50 70 L26 57 Z" stroke="#1B3A5C" stroke-width="1.6" stroke-dasharray="3 3"/>
           <path d="M50 62 L68 72 L50 82 L32 72 Z" stroke="#DEDACB" stroke-width="1.6"/>
         </svg>
-        <div class="empty-title">Aún no hay vista isométrica</div>
-        <div class="empty-sub">Genera un modelo para ver aquí cómo queda el terreno armado, capa por capa.</div>
+        <div class="empty-title" data-i18n="iso_empty_title">Aún no hay vista isométrica</div>
+        <div class="empty-sub" data-i18n="iso_empty_sub">Genera un modelo para ver aquí cómo queda el terreno armado, capa por capa.</div>
       </div>
       <div id="isoContent" style="display:none;padding:18px;"></div>
     </div>
@@ -511,48 +522,48 @@
     <!-- ===================== TAB: PARÁMETROS ===================== -->
     <div class="tab-panel" id="tabParams">
       <div class="side-section">
-        <p class="eyebrow">01 — Sitio</p>
-        <h2>Selección del área</h2>
-        <p class="hint">Dibuja el terreno con rectángulo/círculo/polígono, y agrega edificios con altura manual con la herramienta 🏢 si OpenStreetMap no los tiene.</p>
+        <p class="eyebrow" data-i18n="lbl_select_area">01 — Sitio</p>
+        <h2 data-i18n="h_select_area">Selección del área</h2>
+        <p class="hint" data-i18n="hint_select_area">Dibuja el terreno con rectángulo/círculo/polígono, y agrega edificios con altura manual con la herramienta 🏢 si OpenStreetMap no los tiene.</p>
         <div class="bbox-readout" id="bboxReadout">
-          <div>Sur <b id="rSouth">—</b></div>
-          <div>Norte <b id="rNorth">—</b></div>
-          <div>Oeste <b id="rWest">—</b></div>
-          <div>Este <b id="rEast">—</b></div>
-          <div style="grid-column:1/-1;">Área seleccionada <b id="rSize">—</b></div>
+          <div><span data-i18n="row_south">Sur</span> <b id="rSouth">—</b></div>
+          <div><span data-i18n="row_north">Norte</span> <b id="rNorth">—</b></div>
+          <div><span data-i18n="row_west">Oeste</span> <b id="rWest">—</b></div>
+          <div><span data-i18n="row_east">Este</span> <b id="rEast">—</b></div>
+          <div style="grid-column:1/-1;"><span data-i18n="row_area">Área seleccionada</span> <b id="rSize">—</b></div>
         </div>
         <div class="area-bar-wrap">
           <div class="area-bar-track"><div class="area-bar-fill" id="areaBarFill" style="width:0%;"></div></div>
           <div class="area-bar-legend">
-            <span>Gratis hasta <span id="areaBarFreeLabel">0,16</span> km²</span>
-            <span id="areaBarProLabel">Pro hasta 1,0 km²</span>
+            <span><span data-i18n="area_bar_free">Gratis hasta</span> <span id="areaBarFreeLabel">0,16</span> km²</span>
+            <span id="areaBarProLabel" data-i18n="area_bar_pro">Pro hasta 1,0 km²</span>
           </div>
         </div>
         <div class="error-box" id="areaWarning" style="display:none;margin-top:8px;"></div>
         <div class="row2" style="margin-top:8px;">
-          <button type="button" class="ghost-btn" id="redrawBtn" style="margin:0;">Redibujar área</button>
-          <button type="button" class="ghost-btn" id="clearSelectionBtn" style="margin:0;">✕ Limpiar selección</button>
+          <button type="button" class="ghost-btn" id="redrawBtn" style="margin:0;" data-i18n="btn_redraw">Redibujar área</button>
+          <button type="button" class="ghost-btn" id="clearSelectionBtn" style="margin:0;" data-i18n="btn_clear">✕ Limpiar selección</button>
         </div>
       </div>
 
       <div class="side-section">
-        <p class="eyebrow">02 — Calles y edificios</p>
-        <h2>Datos de OpenStreetMap</h2>
+        <p class="eyebrow" data-i18n="lbl_osm">02 — Calles y edificios</p>
+        <h2 data-i18n="h_osm">Datos de OpenStreetMap</h2>
         <div class="field checkbox-field">
-          <label><input type="checkbox" id="includeStreets"> Incluir calles con nombre</label>
+          <label><input type="checkbox" id="includeStreets"> <span data-i18n="chk_streets">Incluir calles con nombre</span></label>
         </div>
         <div class="field checkbox-field">
-          <label><input type="checkbox" id="includeBuildings"> Incluir edificios de OSM</label>
+          <label><input type="checkbox" id="includeBuildings"> <span data-i18n="chk_buildings">Incluir edificios de OSM</span></label>
         </div>
-        <p class="hint">Se graban en todas las capas (según lo que se ve en cada una); la placa base además muestra la referencia completa. En STL se extruyen en 3D.</p>
+        <p class="hint" data-i18n="hint_osm">Se graban en todas las capas (según lo que se ve en cada una); la placa base además muestra la referencia completa. En STL se extruyen en 3D.</p>
 
         <div class="field row2">
           <div>
-            <label for="defaultBuildingHeightM">Altura por defecto si OSM no la tiene (m)</label>
+            <label for="defaultBuildingHeightM" data-i18n="lbl_default_height">Altura por defecto si OSM no la tiene (m)</label>
             <input type="number" id="defaultBuildingHeightM" value="6" min="1" step="0.5">
           </div>
           <div>
-            <label for="labelTextHeightM">Altura de letra en calles (m reales)</label>
+            <label for="labelTextHeightM" data-i18n="lbl_label_height">Altura de letra en calles (m reales)</label>
             <input type="number" id="labelTextHeightM" value="2" min="0.5" step="0.5">
           </div>
         </div>
@@ -560,25 +571,25 @@
         <div id="stlStreetFields" style="display:none;">
           <div class="field row2">
             <div>
-              <label for="streetWidthM">Ancho de calle (m)</label>
+              <label for="streetWidthM" data-i18n="lbl_street_width">Ancho de calle (m)</label>
               <input type="number" id="streetWidthM" value="6" min="0.5" step="0.5">
             </div>
             <div>
-              <label for="streetRaiseMm">Extrusión hacia arriba (mm)</label>
+              <label for="streetRaiseMm" data-i18n="lbl_street_raise">Extrusión hacia arriba (mm)</label>
               <input type="number" id="streetRaiseMm" value="0.8" min="0.1" step="0.1">
             </div>
           </div>
         </div>
 
-        <p class="hint" id="manualBuildingsHint" style="margin-top:8px;">Edificios agregados a mano: <b id="manualBuildingsCount">0</b></p>
+        <p class="hint" id="manualBuildingsHint" style="margin-top:8px;"><span data-i18n="hint_manual_count">Edificios agregados a mano:</span> <b id="manualBuildingsCount">0</b></p>
       </div>
 
       <div class="side-section">
-        <p class="eyebrow">03 — Escala y salida</p>
-        <h2>Parámetros de fabricación</h2>
+        <p class="eyebrow" data-i18n="lbl_scale_output">03 — Escala y salida</p>
+        <h2 data-i18n="h_fabrication">Parámetros de fabricación</h2>
 
         <div class="field">
-          <label for="scale">Escala del modelo</label>
+          <label for="scale" data-i18n="lbl_scale">Escala del modelo</label>
           <select id="scale">
             <option value="100">1:100</option>
             <option value="150">1:150</option>
@@ -587,33 +598,33 @@
             <option value="1000">1:1000</option>
             <option value="2000">1:2000</option>
             <option value="5000">1:5000</option>
-            <option value="custom">Personalizado…</option>
+            <option value="custom" data-i18n="opt_custom">Personalizado…</option>
           </select>
           <input type="number" id="scaleCustom" placeholder="Ej: 350" min="1" step="1" style="margin-top:6px;display:none;">
         </div>
 
         <div class="field">
-          <label>Formato de salida</label>
+          <label data-i18n="lbl_format">Formato de salida</label>
           <div class="mode-toggle">
-            <button type="button" data-format="dxf" id="formatDxf" class="active">DXF · corte láser</button>
-            <button type="button" data-format="stl" id="formatStl">STL · impresión 3D</button>
+            <button type="button" data-format="dxf" id="formatDxf" class="active" data-i18n="fmt_dxf">DXF · corte láser</button>
+            <button type="button" data-format="stl" id="formatStl" data-i18n="fmt_stl">STL · impresión 3D</button>
           </div>
         </div>
 
         <div class="field row2">
           <div>
-            <label for="sheetW" id="sheetWLabel">Ancho plancha (mm)</label>
+            <label for="sheetW" id="sheetWLabel" data-i18n="lbl_sheet_w">Ancho plancha (mm)</label>
             <input type="number" id="sheetW" value="600" min="100" step="10">
           </div>
           <div>
-            <label for="sheetH" id="sheetHLabel">Largo plancha (mm)</label>
+            <label for="sheetH" id="sheetHLabel" data-i18n="lbl_sheet_h">Largo plancha (mm)</label>
             <input type="number" id="sheetH" value="400" min="100" step="10">
           </div>
         </div>
-        <p class="hint" id="plateHint">Tamaño de la plancha láser. (Para STL, este mismo campo es el tamaño de la cama de impresión 3D, ej. 220x220mm.)</p>
+        <p class="hint" id="plateHint" data-i18n="hint_plate_dxf">Tamaño de la plancha láser. (Para STL, este mismo campo es el tamaño de la cama de impresión 3D, ej. 220x220mm.)</p>
 
         <div class="field" id="thicknessField">
-          <label for="thickness">Grosor del material (mm)</label>
+          <label for="thickness" data-i18n="lbl_thickness">Grosor del material (mm)</label>
           <select id="thickness">
             <option value="1">1 mm</option>
             <option value="1.5">1.5 mm</option>
@@ -629,7 +640,7 @@
             <circle cx="25" cy="25" r="20" stroke="rgba(255,255,255,0.35)" stroke-width="5"/>
             <path d="M25 5 A20 20 0 0 1 45 25" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
           </svg>
-          <span id="btnLabel">Dibuja un área para continuar</span>
+          <span id="btnLabel" data-i18n="btn_draw_first">Dibuja un área para continuar</span>
         </button>
         <div class="error-box" id="genError" style="display:none;"></div>
       </div>
@@ -642,8 +653,8 @@
           <rect x="15" y="15" width="70" height="46" rx="1" stroke="#DEDACB" stroke-width="2"/>
           <path d="M25 55 L40 30 L50 42 L60 25 L75 55 Z" stroke="#1B3A5C" stroke-width="1.6" stroke-dasharray="3 3"/>
         </svg>
-        <div class="empty-title">Aún no hay planchas generadas</div>
-        <div class="empty-sub">Configura los parámetros y presiona "Generar planchas" para ver aquí cómo quedan distribuidas las piezas.</div>
+        <div class="empty-title" data-i18n="layout_empty_title">Aún no hay planchas generadas</div>
+        <div class="empty-sub" data-i18n="layout_empty_sub">Configura los parámetros y presiona "Generar planchas" para ver aquí cómo quedan distribuidas las piezas.</div>
       </div>
       <div id="layoutContent" style="display:none;"></div>
     </div>
@@ -655,20 +666,20 @@
 <div id="authModalBackdrop" class="modal-backdrop" style="display:none;">
   <div class="modal-card">
     <div class="tabs" style="border-bottom:1px solid var(--line);margin-bottom:16px;">
-      <button class="tab-btn active" id="authTabLogin">Iniciar sesión</button>
-      <button class="tab-btn" id="authTabSignup">Registrarse</button>
+      <button class="tab-btn active" id="authTabLogin" data-i18n="auth_login">Iniciar sesión</button>
+      <button class="tab-btn" id="authTabSignup" data-i18n="auth_signup">Registrarse</button>
     </div>
     <div class="field">
-      <label for="authEmail">Correo</label>
-      <input type="text" id="authEmail" placeholder="tu@correo.com">
+      <label for="authEmail" data-i18n="auth_email">Correo</label>
+      <input type="text" id="authEmail" placeholder="tu@correo.com" data-i18n-placeholder="auth_email_ph">
     </div>
     <div class="field">
-      <label for="authPassword">Contraseña</label>
+      <label for="authPassword" data-i18n="auth_password">Contraseña</label>
       <input type="password" id="authPassword" placeholder="••••••••">
     </div>
     <div class="error-box" id="authError" style="display:none;"></div>
-    <button class="cta" id="authSubmitBtn" style="margin-top:14px;">Iniciar sesión</button>
-    <button class="ghost-btn" id="authCancelBtn" style="margin-top:8px;">Cancelar</button>
+    <button class="cta" id="authSubmitBtn" style="margin-top:14px;" data-i18n="auth_login">Iniciar sesión</button>
+    <button class="ghost-btn" id="authCancelBtn" style="margin-top:8px;" data-i18n="auth_cancel">Cancelar</button>
   </div>
 </div>
 
@@ -688,6 +699,253 @@ const SUPABASE_ANON_KEY = window.TERRAZO_SUPABASE_ANON_KEY || "sb_publishable_z_
 const supabaseClient = (SUPABASE_URL.includes("TU-PROYECTO"))
   ? null  // no configurado todavía -- login queda deshabilitado hasta que pegues tus valores reales
   : supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ---------------------------------------------------------------------
+// i18n -- Spanish/English. Static text uses data-i18n="key" (textContent)
+// or data-i18n-placeholder="key" (input placeholder); dynamic strings
+// generated in JS go through t('key', ...substitutions).
+// ---------------------------------------------------------------------
+const I18N = {
+  es: {
+    nav_how: "Cómo funciona", nav_pricing: "Precios", nav_login: "Iniciar sesión", nav_signup: "Registrarse",
+    hero_eyebrow: "terreno real → listo para cortar o imprimir",
+    hero_title: "De cualquier lugar del mapa a una maqueta física, en minutos.",
+    hero_sub: "PODIT Laser and 3D Maps descarga la elevación real de tu sitio -- con sus calles y edificios -- y arma el modelo por ti: planchas DXF numeradas para corte láser, o un STL listo para tu impresora 3D.",
+    hero_cta_start: "Empezar gratis", hero_cta_how: "Ver cómo funciona",
+    trust_brand: "Un producto de", trust_3d: "Impresión 3D", trust_laser: "Corte láser", trust_plot: "Ploteo",
+    features_eyebrow: "Qué incluye", features_title: "Todo lo que hace falta para pasar del mapa a la mesa de trabajo",
+    feat1_title: "Topografía real", feat1_body: "Elevación real del terreno (Mapbox Terrain-RGB), no una aproximación -- curvas de nivel suaves cada tantos metros, a la escala que definas.",
+    feat2_title: "Calles y edificios", feat2_body: "Trae nombres de calles y alturas de edificios desde OpenStreetMap, y agrega a mano los que falten con su altura real.",
+    feat3_title: "Corte láser (DXF)", feat3_body: "Planchas numeradas y anidadas, con costuras y guías de ensamble cuando una pieza no cabe entera en tu plancha.",
+    feat4_title: "Impresión 3D (STL)", feat4_body: "Malla real a escala, calles extruidas y edificios con su altura -- lista para tu slicer, con el tamaño de tu cama ya considerado.",
+    how_eyebrow: "Cómo funciona", how_title: "Cuatro pasos, un archivo listo para fabricar",
+    how1_title: "1. Dibuja tu sitio", how1_body: "Rectángulo, círculo o un polígono a mano -- lo que sea más cómodo para tu terreno.",
+    how2_title: "2. Completa edificios", how2_body: "Marca calles/edificios de OSM, o agrega a mano los que falten con su altura.",
+    how3_title: "3. Escala y salida", how3_body: "Elige la escala, el tamaño de plancha/cama, y si quieres DXF o STL.",
+    how4_title: "4. Descarga y fabrica", how4_body: "Planchas DXF numeradas, o tu STL -- listo para el láser o la impresora.",
+    pricing_eyebrow: "Precios", pricing_title: "Empieza gratis, crece cuando lo necesites",
+    price_free_name: "Gratis", price_free_sub: "Para probar y proyectos chicos.",
+    price_free_li1: "5 modelos por mes", price_free_li2: "Hasta 0,16 km² por sitio", price_free_li3: "DXF y STL", price_free_li4: "Calles y edificios de OSM",
+    price_pro_badge: "Más elegido", price_pro_name: "PODIT Pro", price_pro_sub: "Para uso frecuente y sitios más grandes.",
+    price_pro_li1: "15 modelos por mes", price_pro_li2: "Hasta 1,0 km² por sitio", price_pro_li3: "Mismas capacidades técnicas", price_pro_li4: "Soporte prioritario",
+    price_free_cta: "Empezar gratis", price_pro_cta: "Empezar prueba",
+    footer_rights: "© 2026 PODIT — Impresión 3D, corte láser y ploteo",
+    footer_data: "Datos de elevación: Mapbox Terrain-RGB · Calles y edificios: OpenStreetMap",
+    back_home: "← Inicio",
+    tab_params: "Parámetros", tab_projects: "Mis proyectos", tab_iso: "Vista isométrica", tab_layout: "Planchas",
+    tab_layout_stl: "Resultado STL",
+    search_placeholder: "Buscar ciudad o lugar…",
+    hint_select_area: "Dibuja el terreno con rectángulo/círculo/polígono, y agrega edificios con altura manual con la herramienta 🏢 si OpenStreetMap no los tiene.",
+    lbl_select_area: "01 — Sitio", h_select_area: "Selección del área",
+    row_south: "Sur", row_north: "Norte", row_west: "Oeste", row_east: "Este", row_area: "Área seleccionada",
+    btn_redraw: "Redibujar área", btn_clear: "✕ Limpiar selección",
+    area_bar_free: "Gratis hasta", area_bar_pro: "Pro hasta 1,0 km²",
+    lbl_osm: "02 — Calles y edificios", h_osm: "Datos de OpenStreetMap",
+    chk_streets: "Incluir calles con nombre", chk_buildings: "Incluir edificios de OSM",
+    hint_osm: "En DXF se graban en la capa base. En STL se extruyen en 3D.",
+    lbl_default_height: "Altura por defecto si OSM no la tiene (m)", lbl_label_height: "Altura de letra en calles (m reales)",
+    lbl_street_width: "Ancho de calle (m)", lbl_street_raise: "Extrusión hacia arriba (mm)",
+    hint_manual_count: "Edificios agregados a mano:",
+    lbl_scale_output: "03 — Escala y salida", h_fabrication: "Parámetros de fabricación",
+    lbl_scale: "Escala del modelo", opt_custom: "Personalizado…",
+    lbl_format: "Formato de salida", fmt_dxf: "DXF · corte láser", fmt_stl: "STL · impresión 3D",
+    lbl_sheet_w: "Ancho plancha (mm)", lbl_sheet_h: "Largo plancha (mm)",
+    lbl_bed_w: "Ancho cama impresora (mm)", lbl_bed_h: "Largo cama impresora (mm)",
+    hint_plate_dxf: "Tamaño de la plancha láser.", hint_plate_stl: "Tamaño de la cama de tu impresora 3D (ej. 220x220mm).",
+    lbl_thickness: "Grosor del material (mm)",
+    btn_generate_dxf: "Generar planchas DXF", btn_generate_stl: "Generar modelo STL", btn_draw_first: "Dibuja un área para continuar",
+    btn_generating: "Generando…", btn_area_too_big: "Área demasiado grande para tu plan",
+    projects_eyebrow: "Proyectos guardados", h_projects: "Mis proyectos",
+    hint_projects: "Guarda los parámetros del sitio actual para volver a generarlo después.",
+    btn_save_project: "💾 Guardar proyecto actual", loading: "Cargando…",
+    hint_login_projects: "Inicia sesión para guardar y ver tus proyectos.",
+    hint_no_projects: "Todavía no tienes proyectos guardados.", err_load_projects: "No se pudieron cargar tus proyectos.",
+    btn_load: "Cargar", btn_delete: "Eliminar", confirm_delete_project: "¿Eliminar este proyecto?",
+    iso_empty_title: "Aún no hay vista isométrica",
+    iso_empty_sub: "Genera un modelo para ver aquí cómo queda el terreno armado, capa por capa.",
+    iso_no_layers: "No hay capas para mostrar.",
+    iso_caption: (n) => `Vista esquemática de cómo queda el terreno una vez armado (${n} capas, separación vertical exagerada para que se lea).`,
+    layout_empty_title: "Aún no hay planchas generadas",
+    layout_empty_sub: "Configura los parámetros y presiona \"Generar planchas\" para ver aquí cómo quedan distribuidas las piezas.",
+    plan_free_badge: "Plan gratuito · 5 modelos/mes",
+    account_menu_free: (used) => `Plan gratuito · ${used}/5 modelos usados este mes`,
+    account_menu_pro: (used) => `PODIT Pro · ${used}/15 modelos usados este mes`,
+    btn_upgrade: "Actualizar a PODIT Pro", btn_manage_sub: "Gestionar suscripción", btn_logout: "Cerrar sesión",
+    auth_login: "Iniciar sesión", auth_signup: "Registrarse", auth_create_account: "Crear cuenta",
+    auth_email: "Correo", auth_password: "Contraseña", auth_cancel: "Cancelar",
+    auth_email_ph: "tu@correo.com",
+    auth_fill_fields: "Completa correo y contraseña.",
+    auth_check_email: "Cuenta creada. Revisa tu correo para confirmar antes de iniciar sesión.",
+    prompt_project_name: "Nombre para este proyecto:", default_project_name: "Mi proyecto",
+    alert_project_saved: "Proyecto guardado.", alert_project_save_failed: "No se pudo guardar el proyecto.",
+    alert_pick_area_first: "Primero dibuja un área en el mapa.",
+    err_no_backend: (base) => `No se pudo conectar con el servidor (${base}). ¿Está corriendo el backend?`,
+    tool_rect: "Rectángulo", tool_circle: "Círculo", tool_polygon: "Polígono", tool_building: "Agregar edificio (altura manual)",
+    hint_rect: "Haz clic para marcar la primera esquina",
+    hint_circle: "Haz clic y mantén presionado en el centro, arrastra y suelta para fijar el radio",
+    hint_polygon: "Haz clic para agregar puntos. Cierra el polígono haciendo clic sobre el primer punto",
+    hint_building: "Dibuja el contorno del edificio y ciérralo haciendo clic sobre el primer punto",
+    hint_rect_close: "Mueve el mouse y haz clic para cerrar el rectángulo",
+    hint_circle_release: "Suelta el clic para fijar el radio",
+    hint_circle_retry: "Mantén el clic presionado y arrastra para fijar el radio",
+    hint_polygon_more: "Sigue haciendo clic para agregar puntos",
+    hint_polygon_close: "Haz clic sobre el primer punto (círculo) para cerrar el polígono",
+    prompt_building_height: "Altura del edificio, en metros:",
+    summary_bands: "Cotas extraídas", summary_interval: "Intervalo", summary_parts: "Piezas totales",
+    summary_fragments: "Fragmentos (tiling)", summary_sheets: "Planchas necesarias",
+    summary_building_sheets: "Planchas de edificios", summary_building_layers: "Capas de edificios (total)",
+    btn_download_sheets: "Descargar planchas.zip", btn_preparing: "Preparando descarga…",
+    summary_model_size: "Tamaño del modelo", summary_fits_bed: "Cabe en la cama", yes: "Sí", no: "No",
+    summary_streets_incl: "Calles incluidas", summary_buildings_incl: "Edificios incluidos",
+    hint_defaulted: (n) => `${n} edificio(s) de OSM no tenían altura registrada -- se usó la altura por defecto.`,
+    btn_download_terrain: "Descargar solo terreno (.stl)", btn_download_full: "Descargar terreno + calles/edificios (.stl)",
+    alert_checkout_failed: "No se pudo iniciar el pago:\n", alert_portal_failed: "No se pudo abrir el panel de suscripción.",
+    alert_no_active_sub: "No tienes una suscripción activa todavía.",
+    warn_area_free: (max) => `El área supera el máximo del plan gratuito (${max} km²). Achica la selección o actualiza a PODIT Pro.`,
+    warn_area_pro: (max) => `El área supera el máximo de tu plan Pro (${max} km²). Achica la selección.`,
+    no_results: "Sin resultados",
+    sheet_label: "Plancha", pieces_label: "pieza(s)",
+  },
+  en: {
+    nav_how: "How it works", nav_pricing: "Pricing", nav_login: "Log in", nav_signup: "Sign up",
+    hero_eyebrow: "real terrain → ready to cut or print",
+    hero_title: "From any place on the map to a physical model, in minutes.",
+    hero_sub: "PODIT Laser and 3D Maps downloads your site's real elevation -- with streets and buildings -- and builds the model for you: numbered DXF sheets for laser cutting, or an STL ready for your 3D printer.",
+    hero_cta_start: "Start for free", hero_cta_how: "See how it works",
+    trust_brand: "A product by", trust_3d: "3D Printing", trust_laser: "Laser Cutting", trust_plot: "Plotting",
+    features_eyebrow: "What's included", features_title: "Everything you need to go from map to workbench",
+    feat1_title: "Real topography", feat1_body: "Real terrain elevation (Mapbox Terrain-RGB), not an approximation -- smooth contour lines at your chosen interval, at whatever scale you set.",
+    feat2_title: "Streets and buildings", feat2_body: "Pulls street names and building heights from OpenStreetMap, and lets you add missing ones by hand with their real height.",
+    feat3_title: "Laser cutting (DXF)", feat3_body: "Numbered, nested sheets, with seams and assembly guides whenever a piece doesn't fit whole on your sheet.",
+    feat4_title: "3D printing (STL)", feat4_body: "A true-to-scale mesh, extruded streets, and buildings at real height -- ready for your slicer, with your bed size already factored in.",
+    how_eyebrow: "How it works", how_title: "Four steps, one file ready to fabricate",
+    how1_title: "1. Draw your site", how1_body: "Rectangle, circle, or a freehand polygon -- whatever fits your site best.",
+    how2_title: "2. Fill in buildings", how2_body: "Mark OSM streets/buildings, or add missing ones by hand with their height.",
+    how3_title: "3. Scale and output", how3_body: "Pick the scale, sheet/bed size, and whether you want DXF or STL.",
+    how4_title: "4. Download and build", how4_body: "Numbered DXF sheets, or your STL -- ready for the laser or the printer.",
+    pricing_eyebrow: "Pricing", pricing_title: "Start free, grow when you need to",
+    price_free_name: "Free", price_free_sub: "For testing and small projects.",
+    price_free_li1: "5 models per month", price_free_li2: "Up to 0.16 km² per site", price_free_li3: "DXF and STL", price_free_li4: "OSM streets and buildings",
+    price_pro_badge: "Most popular", price_pro_name: "PODIT Pro", price_pro_sub: "For frequent use and bigger sites.",
+    price_pro_li1: "15 models per month", price_pro_li2: "Up to 1.0 km² per site", price_pro_li3: "Same technical capabilities", price_pro_li4: "Priority support",
+    price_free_cta: "Start for free", price_pro_cta: "Start trial",
+    footer_rights: "© 2026 PODIT — 3D printing, laser cutting and plotting",
+    footer_data: "Elevation data: Mapbox Terrain-RGB · Streets and buildings: OpenStreetMap",
+    back_home: "← Home",
+    tab_params: "Parameters", tab_projects: "My projects", tab_iso: "Isometric view", tab_layout: "Sheets",
+    tab_layout_stl: "STL Result",
+    search_placeholder: "Search city or place…",
+    hint_select_area: "Draw the site with a rectangle/circle/polygon, and add manually-sized buildings with the 🏢 tool if OpenStreetMap is missing them.",
+    lbl_select_area: "01 — Site", h_select_area: "Area selection",
+    row_south: "South", row_north: "North", row_west: "West", row_east: "East", row_area: "Selected area",
+    btn_redraw: "Redraw area", btn_clear: "✕ Clear selection",
+    area_bar_free: "Free up to", area_bar_pro: "Pro up to 1.0 km²",
+    lbl_osm: "02 — Streets and buildings", h_osm: "OpenStreetMap data",
+    chk_streets: "Include named streets", chk_buildings: "Include OSM buildings",
+    hint_osm: "In DXF they're engraved on the base layer. In STL they're extruded in 3D.",
+    lbl_default_height: "Default height if OSM doesn't have it (m)", lbl_label_height: "Street label letter height (real m)",
+    lbl_street_width: "Street width (m)", lbl_street_raise: "Upward extrusion (mm)",
+    hint_manual_count: "Manually added buildings:",
+    lbl_scale_output: "03 — Scale and output", h_fabrication: "Fabrication parameters",
+    lbl_scale: "Model scale", opt_custom: "Custom…",
+    lbl_format: "Output format", fmt_dxf: "DXF · laser cutting", fmt_stl: "STL · 3D printing",
+    lbl_sheet_w: "Sheet width (mm)", lbl_sheet_h: "Sheet length (mm)",
+    lbl_bed_w: "Printer bed width (mm)", lbl_bed_h: "Printer bed length (mm)",
+    hint_plate_dxf: "Laser sheet size.", hint_plate_stl: "Your 3D printer's bed size (e.g. 220x220mm).",
+    lbl_thickness: "Material thickness (mm)",
+    btn_generate_dxf: "Generate DXF sheets", btn_generate_stl: "Generate STL model", btn_draw_first: "Draw an area to continue",
+    btn_generating: "Generating…", btn_area_too_big: "Area too large for your plan",
+    projects_eyebrow: "Saved projects", h_projects: "My projects",
+    hint_projects: "Save the current site's parameters to regenerate it later.",
+    btn_save_project: "💾 Save current project", loading: "Loading…",
+    hint_login_projects: "Log in to save and view your projects.",
+    hint_no_projects: "You don't have any saved projects yet.", err_load_projects: "Couldn't load your projects.",
+    btn_load: "Load", btn_delete: "Delete", confirm_delete_project: "Delete this project?",
+    iso_empty_title: "No isometric view yet",
+    iso_empty_sub: "Generate a model to see here how the terrain looks assembled, layer by layer.",
+    iso_no_layers: "No layers to show.",
+    iso_caption: (n) => `Schematic view of the assembled terrain (${n} layers, vertical spacing exaggerated for legibility).`,
+    layout_empty_title: "No sheets generated yet",
+    layout_empty_sub: "Set your parameters and press \"Generate sheets\" to see how the pieces are laid out.",
+    plan_free_badge: "Free plan · 5 models/month",
+    account_menu_free: (used) => `Free plan · ${used}/5 models used this month`,
+    account_menu_pro: (used) => `PODIT Pro · ${used}/15 models used this month`,
+    btn_upgrade: "Upgrade to PODIT Pro", btn_manage_sub: "Manage subscription", btn_logout: "Log out",
+    auth_login: "Log in", auth_signup: "Sign up", auth_create_account: "Create account",
+    auth_email: "Email", auth_password: "Password", auth_cancel: "Cancel",
+    auth_email_ph: "you@email.com",
+    auth_fill_fields: "Fill in your email and password.",
+    auth_check_email: "Account created. Check your email to confirm before logging in.",
+    prompt_project_name: "Name for this project:", default_project_name: "My project",
+    alert_project_saved: "Project saved.", alert_project_save_failed: "Couldn't save the project.",
+    alert_pick_area_first: "Draw an area on the map first.",
+    err_no_backend: (base) => `Couldn't connect to the server (${base}). Is the backend running?`,
+    tool_rect: "Rectangle", tool_circle: "Circle", tool_polygon: "Polygon", tool_building: "Add building (manual height)",
+    hint_rect: "Click to mark the first corner",
+    hint_circle: "Click and hold at the center, drag and release to set the radius",
+    hint_polygon: "Click to add points. Close the polygon by clicking the first point",
+    hint_building: "Draw the building outline and close it by clicking the first point",
+    hint_rect_close: "Move the mouse and click to close the rectangle",
+    hint_circle_release: "Release the click to set the radius",
+    hint_circle_retry: "Hold the click down and drag to set the radius",
+    hint_polygon_more: "Keep clicking to add points",
+    hint_polygon_close: "Click the first point (circle) to close the polygon",
+    prompt_building_height: "Building height, in meters:",
+    summary_bands: "Elevation bands", summary_interval: "Interval", summary_parts: "Total pieces",
+    summary_fragments: "Fragments (tiling)", summary_sheets: "Sheets needed",
+    summary_building_sheets: "Building sheets", summary_building_layers: "Building layers (total)",
+    btn_download_sheets: "Download sheets.zip", btn_preparing: "Preparing download…",
+    summary_model_size: "Model size", summary_fits_bed: "Fits the bed", yes: "Yes", no: "No",
+    summary_streets_incl: "Streets included", summary_buildings_incl: "Buildings included",
+    hint_defaulted: (n) => `${n} OSM building(s) had no recorded height -- the default height was used.`,
+    btn_download_terrain: "Download terrain only (.stl)", btn_download_full: "Download terrain + streets/buildings (.stl)",
+    alert_checkout_failed: "Couldn't start checkout:\n", alert_portal_failed: "Couldn't open the subscription panel.",
+    alert_no_active_sub: "You don't have an active subscription yet.",
+    warn_area_free: (max) => `The area exceeds the free plan's limit (${max} km²). Shrink the selection or upgrade to PODIT Pro.`,
+    warn_area_pro: (max) => `The area exceeds your Pro plan's limit (${max} km²). Shrink the selection.`,
+    no_results: "No results",
+    sheet_label: "Sheet", pieces_label: "piece(s)",
+  },
+};
+
+let currentLang = localStorage.getItem('terrazo_lang') || (navigator.language.startsWith('en') ? 'en' : 'es');
+
+function t(key, ...args) {
+  const entry = (I18N[currentLang] && I18N[currentLang][key] !== undefined) ? I18N[currentLang][key] : I18N.es[key];
+  return typeof entry === 'function' ? entry(...args) : entry;
+}
+
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (I18N[currentLang][key] !== undefined) el.textContent = t(key);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (I18N[currentLang][key] !== undefined) el.placeholder = t(key);
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    if (I18N[currentLang][key] !== undefined) el.title = t(key);
+  });
+  document.documentElement.lang = currentLang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === currentLang));
+  // A few pieces of already-rendered dynamic text need an explicit refresh
+  // since they aren't simple data-i18n text nodes.
+  if (typeof refreshGenerateButton === 'function') refreshGenerateButton();
+  if (typeof updateAreaBar === 'function' && typeof currentAreaM2 !== 'undefined') updateAreaBar(currentAreaM2);
+  if (typeof refreshAccountBadge === 'function') refreshAccountBadge();
+}
+
+function setLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('terrazo_lang', lang);
+  applyTranslations();
+}
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.onclick = () => setLanguage(btn.dataset.lang);
+});
 
 // ---------------------------------------------------------------------
 // Tabs
@@ -729,7 +987,7 @@ function openAuthModal(mode) {
   authMode = mode;
   document.getElementById('authTabLogin').classList.toggle('active', mode === 'login');
   document.getElementById('authTabSignup').classList.toggle('active', mode === 'signup');
-  document.getElementById('authSubmitBtn').textContent = mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta';
+  document.getElementById('authSubmitBtn').textContent = mode === 'login' ? t('auth_login') : t('auth_create_account');
   document.getElementById('authError').style.display = 'none';
   document.getElementById('authEmail').value = '';
   document.getElementById('authPassword').value = '';
@@ -748,7 +1006,7 @@ document.getElementById('authSubmitBtn').onclick = async () => {
   const errBox = document.getElementById('authError');
   errBox.style.display = 'none';
   if (!email || !password) {
-    errBox.textContent = 'Completa correo y contraseña.';
+    errBox.textContent = t('auth_fill_fields');
     errBox.style.display = 'block';
     return;
   }
@@ -758,7 +1016,7 @@ document.getElementById('authSubmitBtn').onclick = async () => {
       : await supabaseClient.auth.signUp({ email, password });
     if (error) throw error;
     if (authMode === 'signup' && !data.session) {
-      errBox.textContent = 'Cuenta creada. Revisa tu correo para confirmar antes de iniciar sesión.';
+      errBox.textContent = t('auth_check_email');
       errBox.style.display = 'block';
       return;
     }
@@ -774,7 +1032,7 @@ document.getElementById('authSubmitBtn').onclick = async () => {
 async function refreshAccountBadge() {
   const badge = document.getElementById('accountBadge');
   if (!currentSession) {
-    badge.textContent = 'Plan gratuito · 5 modelos/mes';
+    badge.textContent = t('plan_free_badge');
     currentPlanLimits = { maxAreaM2: 160000, isPro: false };
     return;
   }
@@ -788,10 +1046,9 @@ async function refreshAccountBadge() {
       const profile = await resp.json();
       const isPro = profile.subscription_status === 'active';
       currentPlanLimits = { maxAreaM2: isPro ? 1000000 : 160000, isPro };
-      const monthlyLimit = isPro ? 15 : 5;
+      const used = profile.models_generated_this_month || 0;
       document.getElementById('accountMenuPlan').textContent = isPro
-        ? `PODIT Pro · ${profile.models_generated_this_month || 0}/15 modelos usados este mes`
-        : `Plan gratuito · ${profile.models_generated_this_month || 0}/5 modelos usados este mes`;
+        ? t('account_menu_pro', used) : t('account_menu_free', used);
       document.getElementById('upgradeBtn').style.display = isPro ? 'none' : 'block';
       document.getElementById('manageSubBtn').style.display = isPro ? 'block' : 'none';
     }
@@ -848,7 +1105,7 @@ async function startCheckout() {
     window.location.href = url;
   } else {
     const err = await resp.json().catch(() => ({}));
-    alert('No se pudo iniciar el pago:\n' + (formatErrorDetail(err.detail) || `Error ${resp.status}`));
+    alert(t('alert_checkout_failed') + (formatErrorDetail(err.detail) || `Error ${resp.status}`));
   }
 }
 document.getElementById('upgradeBtn').onclick = startCheckout;
@@ -867,7 +1124,7 @@ document.getElementById('manageSubBtn').onclick = async () => {
     window.location.href = url;
   } else {
     const err = await resp.json().catch(() => ({}));
-    alert(formatErrorDetail(err.detail) || 'No se pudo abrir el panel de suscripción.');
+    alert(formatErrorDetail(err.detail) || t('alert_portal_failed'));
   }
 };
 
@@ -904,8 +1161,8 @@ function collectCurrentParams() {
 
 document.getElementById('saveProjectBtn').onclick = async () => {
   if (!currentSession) { openAuthModal('login'); return; }
-  if (!currentBBox) { alert('Primero dibuja un área en el mapa.'); return; }
-  const name = prompt('Nombre para este proyecto:', 'Mi proyecto');
+  if (!currentBBox) { alert(t('alert_pick_area_first')); return; }
+  const name = prompt(t('prompt_project_name'), t('default_project_name'));
   if (!name) return;
   const resp = await fetch(`${API_BASE}/projects`, {
     method: 'POST',
@@ -913,30 +1170,30 @@ document.getElementById('saveProjectBtn').onclick = async () => {
     body: JSON.stringify({ name, params: collectCurrentParams() }),
   });
   if (resp.ok) {
-    alert('Proyecto guardado.');
+    alert(t('alert_project_saved'));
     switchTab('projects');
   } else {
-    alert('No se pudo guardar el proyecto.');
+    alert(t('alert_project_save_failed'));
   }
 };
 
 async function loadProjectsList() {
   const listEl = document.getElementById('projectsList');
   if (!currentSession) {
-    listEl.innerHTML = '<p class="hint">Inicia sesión para guardar y ver tus proyectos.</p>';
+    listEl.innerHTML = `<p class="hint">${t('hint_login_projects')}</p>`;
     return;
   }
-  listEl.innerHTML = '<p class="hint">Cargando…</p>';
+  listEl.innerHTML = `<p class="hint">${t('loading')}</p>`;
   const resp = await fetch(`${API_BASE}/projects`, {
     headers: { Authorization: `Bearer ${currentSession.access_token}` },
   });
   if (!resp.ok) {
-    listEl.innerHTML = '<p class="hint">No se pudieron cargar tus proyectos.</p>';
+    listEl.innerHTML = `<p class="hint">${t('err_load_projects')}</p>`;
     return;
   }
   const projects = await resp.json();
   if (!projects.length) {
-    listEl.innerHTML = '<p class="hint">Todavía no tienes proyectos guardados.</p>';
+    listEl.innerHTML = `<p class="hint">${t('hint_no_projects')}</p>`;
     return;
   }
   listEl.innerHTML = projects.map(p => `
@@ -946,8 +1203,8 @@ async function loadProjectsList() {
         <div class="project-card-meta">${new Date(p.updated_at || p.created_at).toLocaleDateString()}</div>
       </div>
       <div class="project-card-actions">
-        <button data-load="${p.id}">Cargar</button>
-        <button data-delete="${p.id}">Eliminar</button>
+        <button data-load="${p.id}">${t('btn_load')}</button>
+        <button data-delete="${p.id}">${t('btn_delete')}</button>
       </div>
     </div>`).join('');
 
@@ -956,7 +1213,7 @@ async function loadProjectsList() {
   });
   listEl.querySelectorAll('[data-delete]').forEach(btn => {
     btn.onclick = async () => {
-      if (!confirm('¿Eliminar este proyecto?')) return;
+      if (!confirm(t('confirm_delete_project'))) return;
       await fetch(`${API_BASE}/projects/${btn.dataset.delete}`, {
         method: 'DELETE', headers: { Authorization: `Bearer ${currentSession.access_token}` },
       });
@@ -1062,7 +1319,7 @@ function initPlaceSearch() {
       const resp = await fetch(url, { headers: { 'Accept-Language': 'es' } });
       const results = await resp.json();
       if (!results.length) {
-        resultsBox.innerHTML = '<div class="place-search-result">Sin resultados</div>';
+        resultsBox.innerHTML = `<div class="place-search-result">${t('no_results')}</div>`;
         resultsBox.style.display = 'block';
         return;
       }
@@ -1113,6 +1370,7 @@ document.getElementById('pricingProBtn').onclick = startCheckout;
 document.getElementById('backToLandingBtn').onclick = backToLanding;
 
 onAuthReady();
+applyTranslations();
 
 // ---------------------------------------------------------------------
 // Map + area selection (plain Leaflet, no plugins) — 3 tools:
@@ -1155,10 +1413,10 @@ function polygonAreaM2(latlngs) {
 
 function updateAreaBar(areaM2) {
   const freeKm2 = 0.16, proKm2 = 1.0;
-  document.getElementById('areaBarFreeLabel').textContent = freeKm2.toFixed(2).replace('.', ',');
+  const dec = currentLang === 'es' ? ',' : '.';
+  document.getElementById('areaBarFreeLabel').textContent = freeKm2.toFixed(2).replace('.', dec);
   const maxKm2 = currentPlanLimits.isPro ? proKm2 : freeKm2;
-  document.getElementById('areaBarProLabel').textContent = currentPlanLimits.isPro
-    ? `Pro hasta ${proKm2.toFixed(1)} km²` : `Pro: hasta ${proKm2.toFixed(1)} km²`;
+  document.getElementById('areaBarProLabel').textContent = t('area_bar_pro');
   const areaKm2 = areaM2 / 1_000_000;
   const pct = Math.min(100, (areaKm2 / maxKm2) * 100);
   const fill = document.getElementById('areaBarFill');
@@ -1174,14 +1432,14 @@ function setSelection(bounds, shapeType, shapeData, areaM2) {
   document.getElementById('rNorth').textContent = currentBBox.north.toFixed(4);
   document.getElementById('rWest').textContent  = currentBBox.west.toFixed(4);
   document.getElementById('rEast').textContent  = currentBBox.east.toFixed(4);
-  document.getElementById('rSize').textContent = `${areaM2.toLocaleString('es-CL', {maximumFractionDigits: 0})} m²`;
+  document.getElementById('rSize').textContent = `${areaM2.toLocaleString(currentLang === 'es' ? 'es-CL' : 'en-US', {maximumFractionDigits: 0})} m²`;
 
   const warnEl = document.getElementById('areaWarning');
   if (areaM2 > currentPlanLimits.maxAreaM2) {
     const maxKm2 = (currentPlanLimits.maxAreaM2 / 1_000_000).toFixed(2);
     warnEl.textContent = currentPlanLimits.isPro
-      ? `El área supera el máximo de tu plan Pro (${maxKm2} km²). Achica la selección.`
-      : `El área supera el máximo del plan gratuito (${maxKm2} km²). Achica la selección o actualiza a PODIT Pro.`;
+      ? t('warn_area_pro', maxKm2)
+      : t('warn_area_free', maxKm2);
     warnEl.style.display = 'block';
   } else {
     warnEl.style.display = 'none';
@@ -1204,10 +1462,10 @@ function clearDrawingLayers() {
 }
 
 const hintByShape = {
-  rectangle: 'Haz clic para marcar la primera esquina',
-  circle: 'Haz clic y mantén presionado en el centro, arrastra y suelta para fijar el radio',
-  polygon: 'Haz clic para agregar puntos. Cierra el polígono haciendo clic sobre el primer punto',
-  building: 'Dibuja el contorno del edificio y ciérralo haciendo clic sobre el primer punto',
+  get rectangle() { return t('hint_rect'); },
+  get circle() { return t('hint_circle'); },
+  get polygon() { return t('hint_polygon'); },
+  get building() { return t('hint_building'); },
 };
 
 function startDrawing() {
@@ -1264,7 +1522,7 @@ function initMap() {
     if (currentShape === 'rectangle') {
       if (points.length === 0) {
         points = [e.latlng];
-        document.getElementById('drawHint').textContent = 'Mueve el mouse y haz clic para cerrar el rectángulo';
+        document.getElementById('drawHint').textContent = t('hint_rect_close');
         return;
       }
       const bounds = L.latLngBounds(points[0], e.latlng);
@@ -1288,8 +1546,8 @@ function initMap() {
       }
       points.push(e.latlng);
       document.getElementById('drawHint').textContent = points.length < 3
-        ? 'Sigue haciendo clic para agregar puntos'
-        : 'Haz clic sobre el primer punto (círculo) para cerrar el polígono';
+        ? t('hint_polygon_more')
+        : t('hint_polygon_close');
       if (previewLayer) map.removeLayer(previewLayer);
       previewLayer = L.polygon(points, { color: '#1B3A5C', weight: 2, dashArray: '4 4', fillOpacity: 0.05 }).addTo(map);
       return;
@@ -1297,7 +1555,7 @@ function initMap() {
 
     if (currentShape === 'building') {
       if (points.length >= 3 && distPx(map, points[0], e.latlng) < 12) {
-        const heightStr = prompt('Altura del edificio, en metros:', '15');
+        const heightStr = prompt(t('prompt_building_height'), '15');
         const heightM = heightStr ? parseFloat(heightStr) : NaN;
         if (previewLayer) { map.removeLayer(previewLayer); previewLayer = null; }
         if (!isNaN(heightM) && heightM > 0) {
@@ -1334,7 +1592,7 @@ function initMap() {
     circleDragging = true;
     circleCenter = e.latlng;
     map.dragging.disable();
-    document.getElementById('drawHint').textContent = 'Suelta el clic para fijar el radio';
+    document.getElementById('drawHint').textContent = t('hint_circle_release');
   });
 
   map.on('mouseup', (e) => {
@@ -1345,7 +1603,7 @@ function initMap() {
     if (radius < 1) {
       // Essentially a click without dragging -- not a real circle, let the
       // person try again instead of creating a degenerate 0m circle.
-      document.getElementById('drawHint').textContent = 'Mantén el clic presionado y arrastra para fijar el radio';
+      document.getElementById('drawHint').textContent = t('hint_circle_retry');
       return;
     }
     const circle = L.circle(circleCenter, { radius, color: '#1B3A5C', weight: 2, fillOpacity: 0.08 });
@@ -1356,7 +1614,7 @@ function initMap() {
   });
 
   function showLiveArea(areaM2) {
-    document.getElementById('rSize').textContent = `${areaM2.toLocaleString('es-CL', {maximumFractionDigits: 0})} m²`;
+    document.getElementById('rSize').textContent = `${areaM2.toLocaleString(currentLang === 'es' ? 'es-CL' : 'en-US', {maximumFractionDigits: 0})} m²`;
     updateAreaBar(areaM2);
   }
 
@@ -1423,13 +1681,11 @@ function setFormat(fmt) {
   document.getElementById('formatDxf').classList.toggle('active', fmt === "dxf");
   document.getElementById('formatStl').classList.toggle('active', fmt === "stl");
   document.getElementById('thicknessField').style.display = fmt === "dxf" ? 'block' : 'none';
-  document.getElementById('sheetWLabel').textContent = fmt === "dxf" ? "Ancho plancha (mm)" : "Ancho cama impresora (mm)";
-  document.getElementById('sheetHLabel').textContent = fmt === "dxf" ? "Largo plancha (mm)" : "Largo cama impresora (mm)";
-  document.getElementById('plateHint').textContent = fmt === "dxf"
-    ? "Tamaño de la plancha láser."
-    : "Tamaño de la cama de tu impresora 3D (ej. 220x220mm).";
+  document.getElementById('sheetWLabel').textContent = fmt === "dxf" ? t('lbl_sheet_w') : t('lbl_bed_w');
+  document.getElementById('sheetHLabel').textContent = fmt === "dxf" ? t('lbl_sheet_h') : t('lbl_bed_h');
+  document.getElementById('plateHint').textContent = fmt === "dxf" ? t('hint_plate_dxf') : t('hint_plate_stl');
   document.getElementById('tabBtnIso').style.display = fmt === "dxf" ? 'block' : 'none';
-  document.getElementById('tabBtnLayout').textContent = fmt === "dxf" ? 'Planchas' : 'Resultado STL';
+  document.getElementById('tabBtnLayout').textContent = fmt === "dxf" ? t('tab_layout') : t('tab_layout_stl');
   document.getElementById('stlStreetFields').style.display = fmt === "stl" ? 'block' : 'none';
   refreshGenerateButton();
 }
@@ -1451,13 +1707,13 @@ function refreshGenerateButton() {
   if (btn.classList.contains('loading')) return; // don't override the spinner state
   if (currentBBox && currentAreaM2 > currentPlanLimits.maxAreaM2) {
     btn.disabled = true;
-    label.textContent = "Área demasiado grande para tu plan";
+    label.textContent = t('btn_area_too_big');
   } else if (currentBBox) {
     btn.disabled = false;
-    label.textContent = outputFormat === "dxf" ? "Generar planchas DXF" : "Generar modelo STL";
+    label.textContent = outputFormat === "dxf" ? t('btn_generate_dxf') : t('btn_generate_stl');
   } else {
     btn.disabled = true;
-    label.textContent = "Dibuja un área para continuar";
+    label.textContent = t('btn_draw_first');
   }
 }
 
@@ -1466,7 +1722,7 @@ function setButtonLoading(isLoading) {
   const label = document.getElementById('btnLabel');
   btn.classList.toggle('loading', isLoading);
   btn.disabled = isLoading;
-  label.textContent = isLoading ? "Generando…" : "Generar planchas DXF";
+  label.textContent = isLoading ? t('btn_generating') : t('btn_generate_dxf');
 }
 
 // ---------------------------------------------------------------------
@@ -1479,22 +1735,22 @@ function renderLayoutTab(previewData, blobUrl) {
 
   const s = previewData.summary;
   const buildingRows = s.num_building_stack_sheets
-    ? `<div><span>Planchas de edificios</span><span>${s.num_building_stack_sheets}</span></div>
-       <div><span>Capas de edificios (total)</span><span>${s.num_building_layers_total}</span></div>`
+    ? `<div><span>${t('summary_building_sheets')}</span><span>${s.num_building_stack_sheets}</span></div>
+       <div><span>${t('summary_building_layers')}</span><span>${s.num_building_layers_total}</span></div>`
     : '';
   let html = `
     <div class="layout-summary">
       <div class="summary-list">
-        <div><span>Cotas extraídas</span><span>${s.num_elevation_bands}</span></div>
-        <div><span>Intervalo</span><span>${s.contour_interval_m} m</span></div>
-        <div><span>Piezas totales</span><span>${s.num_parts_total}</span></div>
-        <div><span>Fragmentos (tiling)</span><span>${s.num_parts_tiled_fragments}</span></div>
-        <div><span>Planchas necesarias</span><span>${s.num_sheets}</span></div>
+        <div><span>${t('summary_bands')}</span><span>${s.num_elevation_bands}</span></div>
+        <div><span>${t('summary_interval')}</span><span>${s.contour_interval_m} m</span></div>
+        <div><span>${t('summary_parts')}</span><span>${s.num_parts_total}</span></div>
+        <div><span>${t('summary_fragments')}</span><span>${s.num_parts_tiled_fragments}</span></div>
+        <div><span>${t('summary_sheets')}</span><span>${s.num_sheets}</span></div>
         ${buildingRows}
       </div>
       ${s.street_building_warning ? `<div class="error-box" style="margin-top:10px;">${s.street_building_warning}</div>` : ''}
       <button class="download-btn" id="dlBtn" ${blobUrl ? '' : 'disabled'}>
-        ${blobUrl ? 'Descargar planchas.zip' : 'Preparando descarga…'}
+        ${blobUrl ? t('btn_download_sheets') : t('btn_preparing')}
       </button>
     </div>`;
 
@@ -1515,7 +1771,7 @@ function renderLayoutTab(previewData, blobUrl) {
 
     html += `
       <div class="sheet-card">
-        <div class="sheet-card-title"><span>Plancha ${sheet.sheet_index + 1} / ${previewData.sheets.length}</span><span>${sheet.parts.length} pieza(s)</span></div>
+        <div class="sheet-card-title"><span>${t('sheet_label')} ${sheet.sheet_index + 1} / ${previewData.sheets.length}</span><span>${sheet.parts.length} ${t('pieces_label')}</span></div>
         <div class="sheet-svg-wrap">
           <svg viewBox="0 0 ${W} ${H}" style="transform:scaleY(-1)">
             <rect x="0" y="0" width="${W}" height="${H}" fill="#fff" stroke="#DEDACB" stroke-width="2"/>
@@ -1560,7 +1816,7 @@ function renderIsoTab(assemblyData) {
 
   const layers = assemblyData.layers;
   if (!layers.length) {
-    content.innerHTML = '<div class="hint">No hay capas para mostrar.</div>';
+    content.innerHTML = `<div class="hint">${t('iso_no_layers')}</div>`;
     return;
   }
 
@@ -1606,7 +1862,7 @@ function renderIsoTab(assemblyData) {
   ).join('');
 
   content.innerHTML = `
-    <p class="hint" style="margin-bottom:12px;">Vista esquemática de cómo queda el terreno una vez armado (${layers.length} capas, separación vertical exagerada para que se lea).</p>
+    <p class="hint" style="margin-bottom:12px;">${t('iso_caption', layers.length)}</p>
     <div class="sheet-svg-wrap">
       <svg viewBox="${vbX} ${vbY} ${vbW} ${vbH}" style="transform:scaleY(-1);">
         ${pathsSvg}
@@ -1717,7 +1973,7 @@ async function handleGenerate() {
     }
   } catch (e) {
     const msg = (e instanceof TypeError)
-      ? `No se pudo conectar con el servidor (${API_BASE}). ¿Está corriendo el backend?`
+      ? t('err_no_backend', API_BASE)
       : e.message;
     showError(msg);
   } finally {
@@ -1733,19 +1989,19 @@ function renderStlResult(summary, terrainOnlyBlob, fullBlob) {
   content.style.display = 'block';
   const warn = summary.bed_warning || summary.street_building_warning;
   const defaultedNote = summary.num_buildings_defaulted > 0
-    ? `<p class="hint" style="margin-top:6px;">${summary.num_buildings_defaulted} edificio(s) de OSM no tenían altura registrada -- se usó la altura por defecto.</p>` : '';
+    ? `<p class="hint" style="margin-top:6px;">${t('hint_defaulted', summary.num_buildings_defaulted)}</p>` : '';
   content.innerHTML = `
     <div class="layout-summary">
       <div class="summary-list">
-        <div><span>Tamaño del modelo</span><span>${summary.footprint_mm ? summary.footprint_mm.join(' x ') + ' mm' : '—'}</span></div>
-        <div><span>Cabe en la cama</span><span>${summary.fits_bed ? 'Sí' : 'No'}</span></div>
-        <div><span>Calles incluidas</span><span>${summary.num_streets}</span></div>
-        <div><span>Edificios incluidos</span><span>${summary.num_buildings}</span></div>
+        <div><span>${t('summary_model_size')}</span><span>${summary.footprint_mm ? summary.footprint_mm.join(' x ') + ' mm' : '—'}</span></div>
+        <div><span>${t('summary_fits_bed')}</span><span>${summary.fits_bed ? t('yes') : t('no')}</span></div>
+        <div><span>${t('summary_streets_incl')}</span><span>${summary.num_streets}</span></div>
+        <div><span>${t('summary_buildings_incl')}</span><span>${summary.num_buildings}</span></div>
       </div>
       ${defaultedNote}
       ${warn ? `<div class="error-box" style="margin-top:10px;">${warn}</div>` : ''}
-      <button class="download-btn" id="dlTerrainBtn">Descargar solo terreno (.stl)</button>
-      ${fullBlob ? '<button class="download-btn" id="dlFullBtn">Descargar terreno + calles/edificios (.stl)</button>' : ''}
+      <button class="download-btn" id="dlTerrainBtn">${t('btn_download_terrain')}</button>
+      ${fullBlob ? `<button class="download-btn" id="dlFullBtn">${t('btn_download_full')}</button>` : ''}
     </div>`;
   document.getElementById('dlTerrainBtn').onclick = () => {
     const a = document.createElement('a');
