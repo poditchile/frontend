@@ -480,6 +480,7 @@
       <button type="button" class="draw-tool-btn" data-shape="circle" data-i18n-title="tool_circle" title="Círculo">◯</button>
       <button type="button" class="draw-tool-btn" data-shape="polygon" data-i18n-title="tool_polygon" title="Polígono">⬠</button>
       <button type="button" class="draw-tool-btn" data-shape="building" data-i18n-title="tool_building" title="Agregar edificio (altura manual)">🏢</button>
+      <button type="button" class="draw-tool-btn" id="deleteBuildingBtn" title="Borrar edificio (clic sobre uno)">🗑</button>
     </div>
     <div class="draw-hint" id="drawHint" data-i18n="hint_rect">Dibuja un rectángulo sobre el sitio que quieres modelar</div>
   </div>
@@ -678,7 +679,7 @@
 // (Todos son valores PÚBLICOS, seguros de dejar en el código del navegador.)
 // ---------------------------------------------------------------------
 const API_BASE = window.TERRAZO_API_BASE || "https://podit-laser-maps-backend.onrender.com";
-const APP_VERSION = "8";
+const APP_VERSION = "9";
 document.addEventListener('DOMContentLoaded', () => {
   const vt = document.getElementById('versionTag');
   if (vt) vt.textContent = 'v' + APP_VERSION;
@@ -1191,12 +1192,25 @@ async function loadProjectsList() {
       </div>
       <div class="project-card-actions">
         <button data-load="${p.id}">${t('btn_load')}</button>
+        <button data-update="${p.id}">${currentLang === 'es' ? 'Actualizar' : 'Update'}</button>
         <button data-delete="${p.id}">${t('btn_delete')}</button>
       </div>
     </div>`).join('');
 
   listEl.querySelectorAll('[data-load]').forEach(btn => {
     btn.onclick = () => applyProjectParams(projects.find(p => p.id === btn.dataset.load).params);
+  });
+  listEl.querySelectorAll('[data-update]').forEach(btn => {
+    btn.onclick = async () => {
+      const proj = projects.find(p => p.id === btn.dataset.update);
+      await fetch(`${API_BASE}/projects/${btn.dataset.update}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
+        body: JSON.stringify({ name: proj.name, params: collectCurrentParams() }),
+      });
+      alert(currentLang === 'es' ? 'Proyecto actualizado.' : 'Project updated.');
+      loadProjectsList();
+    };
   });
   listEl.querySelectorAll('[data-delete]').forEach(btn => {
     btn.onclick = async () => {
@@ -1270,6 +1284,7 @@ function applyProjectParams(params) {
         const layer = L.polygon(latlngs, { color: '#2A6F97', weight: 2, fillOpacity: 0.18 })
           .bindTooltip(`${b.height_m || '?'} m`, { permanent: true, direction: 'center', className: 'building-tooltip' })
           .addTo(map);
+        attachDeleteHandler(layer);
         manualBuildingLayers.push(layer);
       });
     }
@@ -1386,6 +1401,20 @@ let previewLayer = null;
 let finalLayer = null;
 let manualBuildings = [];       // [{ points: [[lat,lon],...], height_m }]
 let manualBuildingLayers = [];  // matching Leaflet layers, for redraw/clear
+let deleteBuildingMode = false;
+
+function attachDeleteHandler(layer) {
+  layer.on('click', (e) => {
+    if (!deleteBuildingMode) return;
+    L.DomEvent.stopPropagation(e);
+    const idx = manualBuildingLayers.indexOf(layer);
+    if (idx === -1) return;
+    map.removeLayer(layer);
+    manualBuildingLayers.splice(idx, 1);
+    manualBuildings.splice(idx, 1);
+    document.getElementById('manualBuildingsCount').textContent = manualBuildings.length;
+  });
+}
 
 function metersBetween(lat1, lon1, lat2, lon2) {
   const R = 6371000, toRad = d => d * Math.PI / 180;
@@ -1565,6 +1594,7 @@ function initMap() {
           const layer = L.polygon(points, { color: '#2A6F97', weight: 2, fillOpacity: 0.18 })
             .bindTooltip(`${heightM} m`, { permanent: true, direction: 'center', className: 'building-tooltip' })
             .addTo(map);
+          attachDeleteHandler(layer);
           manualBuildings.push({ points: points.map(p => [p.lat, p.lng]), height_m: heightM });
           manualBuildingLayers.push(layer);
           document.getElementById('manualBuildingsCount').textContent = manualBuildings.length;
@@ -1635,6 +1665,14 @@ function initMap() {
   document.querySelectorAll('.draw-tool-btn').forEach(btn => {
     btn.onclick = () => setShape(btn.dataset.shape);
   });
+  document.getElementById('deleteBuildingBtn').onclick = () => {
+    deleteBuildingMode = !deleteBuildingMode;
+    document.getElementById('deleteBuildingBtn').classList.toggle('active', deleteBuildingMode);
+    document.getElementById('drawHint').style.display = deleteBuildingMode ? 'block' : 'none';
+    document.getElementById('drawHint').textContent = deleteBuildingMode
+      ? (currentLang === 'es' ? 'Haz clic sobre un edificio para borrarlo' : 'Click a building to delete it')
+      : '';
+  };
   document.getElementById('redrawBtn').onclick = startDrawing;
   document.getElementById('clearSelectionBtn').onclick = () => {
     if (finalLayer) { map.removeLayer(finalLayer); finalLayer = null; }
