@@ -1359,9 +1359,6 @@ document.getElementById('pricingFreeBtn').onclick = goToAppOrLogin;
 document.getElementById('pricingProBtn').onclick = startCheckout;
 document.getElementById('backToLandingBtn').onclick = backToLanding;
 
-onAuthReady();
-applyTranslations();
-
 // ---------------------------------------------------------------------
 // Map + area selection (plain Leaflet, no plugins) — 3 tools:
 // rectangle, circle, freehand polygon. Whatever you draw, the app uses
@@ -1923,6 +1920,9 @@ function renderStlResult(summary, terrainOnlyBlob, fullBlob) {
 }
 
 document.getElementById('generateBtn').onclick = handleGenerate;
+
+onAuthReady();
+applyTranslations();
 </script>
 </body>
 </html>
