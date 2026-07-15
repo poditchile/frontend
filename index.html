@@ -678,7 +678,11 @@
 // (Todos son valores PÚBLICOS, seguros de dejar en el código del navegador.)
 // ---------------------------------------------------------------------
 const API_BASE = window.TERRAZO_API_BASE || "https://podit-laser-maps-backend.onrender.com";
-const APP_VERSION = "2026-07-15-03";
+const APP_VERSION = "2026-07-15-04";
+document.addEventListener('DOMContentLoaded', () => {
+  const vt = document.getElementById('versionTag');
+  if (vt) vt.textContent = 'v' + APP_VERSION;
+});
 const SUPABASE_URL = window.TERRAZO_SUPABASE_URL || "https://kgemfzokkzeivylkikbd.supabase.co";
 const SUPABASE_ANON_KEY = window.TERRAZO_SUPABASE_ANON_KEY || "sb_publishable_z_3bf_lsU_PxZzup9ocAZg_ss7nGf2o";
 
@@ -714,7 +718,7 @@ const I18N = {
     price_free_li1: "5 modelos por mes", price_free_li2: "Hasta 0,16 km² por sitio", price_free_li3: "DXF y STL", price_free_li4: "Calles y edificios de OSM",
     price_pro_badge: "Más elegido", price_pro_name: "PODIT Pro", price_pro_sub: "Para uso frecuente y sitios más grandes.",
     price_pro_li1: "15 modelos por mes", price_pro_li2: "Hasta 1,0 km² por sitio", price_pro_li3: "Mismas capacidades técnicas", price_pro_li4: "Soporte prioritario",
-    price_free_cta: "Empezar gratis", price_pro_cta: "Empezar prueba",
+    price_free_cta: "Empezar gratis", price_pro_cta: "Suscribirme a Pro",
     footer_rights: "© 2026 PODIT — Impresión 3D, corte láser y ploteo",
     footer_data: "Datos de elevación: Mapbox Terrain-RGB · Calles y edificios: OpenStreetMap",
     back_home: "← Inicio",
@@ -810,7 +814,7 @@ const I18N = {
     price_free_li1: "5 models per month", price_free_li2: "Up to 0.16 km² per site", price_free_li3: "DXF and STL", price_free_li4: "OSM streets and buildings",
     price_pro_badge: "Most popular", price_pro_name: "PODIT Pro", price_pro_sub: "For frequent use and bigger sites.",
     price_pro_li1: "15 models per month", price_pro_li2: "Up to 1.0 km² per site", price_pro_li3: "Same technical capabilities", price_pro_li4: "Priority support",
-    price_free_cta: "Start for free", price_pro_cta: "Start trial",
+    price_free_cta: "Start for free", price_pro_cta: "Subscribe to Pro",
     footer_rights: "© 2026 PODIT — 3D printing, laser cutting and plotting",
     footer_data: "Elevation data: Mapbox Terrain-RGB · Streets and buildings: OpenStreetMap",
     back_home: "← Home",
@@ -948,6 +952,7 @@ document.getElementById('tabBtnLayout').onclick = () => switchTab('layout');
 // ---------------------------------------------------------------------
 let currentSession = null;
 let authMode = 'login'; // 'login' | 'signup'
+let authIntent = 'enterApp'; // 'enterApp' | 'checkout' -- what to do right after login succeeds
 
 function requireConfigured() {
   if (!supabaseClient) {
@@ -997,7 +1002,7 @@ document.getElementById('authSubmitBtn').onclick = async () => {
     }
     closeAuthModal();
     await onAuthReady();
-    enterApp();
+    if (authIntent === 'checkout') { startCheckout(); } else { enterApp(); }
   } catch (e) {
     errBox.textContent = e.message || 'No se pudo completar la solicitud.';
     errBox.style.display = 'block';
@@ -1064,7 +1069,7 @@ function formatErrorDetail(detail) {
 }
 
 async function startCheckout() {
-  if (!currentSession) { openAuthModal('login'); return; }
+  if (!currentSession) { authIntent = 'checkout'; openAuthModal('login'); return; }
   // Stripe requires real http(s) redirect URLs -- file:// (opening index.html
   // directly from disk, like during local testing) isn't valid for it. Once
   // this is deployed on a real domain, window.location.href works as-is.
@@ -1351,6 +1356,7 @@ function initPlaceSearch() {
 
 function goToAppOrLogin() {
   if (currentSession) { enterApp(); return; }
+  authIntent = 'enterApp';
   openAuthModal('login');
 }
 document.getElementById('heroStartBtn').onclick = goToAppOrLogin;
@@ -1498,6 +1504,7 @@ function distPx(map, a, b) {
 
 function initMap() {
   map = L.map('map', { zoomControl: true, doubleClickZoom: false }).setView([-33.4463, -70.6634], 15);
+  map.invalidateSize();
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
   }).addTo(map);
@@ -1908,8 +1915,7 @@ document.getElementById('generateBtn').onclick = handleGenerate;
 
 onAuthReady();
 applyTranslations();
-document.getElementById('versionTag').textContent = 'v' + APP_VERSION;
 </script>
-<div id="versionTag" style="position:fixed;bottom:6px;left:8px;z-index:9999;font-family:monospace;font-size:10px;color:#999;background:rgba(255,255,255,0.7);padding:2px 6px;border-radius:4px;"></div>
+<div id="versionTag" style="position:fixed;bottom:6px;left:8px;z-index:99999;font-family:monospace;font-size:12px;color:#000;background:#fff;padding:3px 8px;border:1px solid #000;border-radius:4px;">v?</div>
 </body>
 </html>
