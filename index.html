@@ -678,6 +678,7 @@
 // (Todos son valores PÚBLICOS, seguros de dejar en el código del navegador.)
 // ---------------------------------------------------------------------
 const API_BASE = window.TERRAZO_API_BASE || "https://podit-laser-maps-backend.onrender.com";
+const APP_VERSION = "2026-07-15-03";
 const SUPABASE_URL = window.TERRAZO_SUPABASE_URL || "https://kgemfzokkzeivylkikbd.supabase.co";
 const SUPABASE_ANON_KEY = window.TERRAZO_SUPABASE_ANON_KEY || "sb_publishable_z_3bf_lsU_PxZzup9ocAZg_ss7nGf2o";
 
@@ -1907,6 +1908,8 @@ document.getElementById('generateBtn').onclick = handleGenerate;
 
 onAuthReady();
 applyTranslations();
+document.getElementById('versionTag').textContent = 'v' + APP_VERSION;
 </script>
+<div id="versionTag" style="position:fixed;bottom:6px;left:8px;z-index:9999;font-family:monospace;font-size:10px;color:#999;background:rgba(255,255,255,0.7);padding:2px 6px;border-radius:4px;"></div>
 </body>
 </html>
