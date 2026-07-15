@@ -682,7 +682,7 @@
 // (Todos son valores PÚBLICOS, seguros de dejar en el código del navegador.)
 // ---------------------------------------------------------------------
 const API_BASE = window.TERRAZO_API_BASE || "https://podit-laser-maps-backend.onrender.com";
-const APP_VERSION = "10";
+const APP_VERSION = "11";
 document.addEventListener('DOMContentLoaded', () => {
   const vt = document.getElementById('versionTag');
   if (vt) vt.textContent = 'v' + APP_VERSION;
@@ -1073,6 +1073,19 @@ document.getElementById('logoutBtn').onclick = async () => {
   refreshAccountBadge();
   backToLanding();
 };
+
+async function postJSON(path, payload) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (currentSession) headers['Authorization'] = `Bearer ${currentSession.access_token}`;
+  const resp = await fetch(`${API_BASE}${path}`, {
+    method: 'POST', headers, body: JSON.stringify(payload)
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+    throw new Error(formatErrorDetail(err.detail) || `Error ${resp.status} en ${path}`);
+  }
+  return resp;
+}
 
 function formatErrorDetail(detail) {
   if (!detail) return null;
@@ -1870,19 +1883,6 @@ async function handleGenerate() {
     default_building_height_m: parseFloat(document.getElementById('defaultBuildingHeightM').value),
     label_text_real_height_m: parseFloat(document.getElementById('labelTextHeightM').value),
   };
-
-  async function postJSON(path, payload) {
-    const headers = { 'Content-Type': 'application/json' };
-    if (currentSession) headers['Authorization'] = `Bearer ${currentSession.access_token}`;
-    const resp = await fetch(`${API_BASE}${path}`, {
-      method: 'POST', headers, body: JSON.stringify(payload)
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-      throw new Error(formatErrorDetail(err.detail) || `Error ${resp.status} en ${path}`);
-    }
-    return resp;
-  }
 
   try {
     if (outputFormat === 'stl') {
