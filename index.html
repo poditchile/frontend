@@ -678,7 +678,7 @@
 // (Todos son valores PÚBLICOS, seguros de dejar en el código del navegador.)
 // ---------------------------------------------------------------------
 const API_BASE = window.TERRAZO_API_BASE || "https://podit-laser-maps-backend.onrender.com";
-const APP_VERSION = "7";
+const APP_VERSION = "8";
 document.addEventListener('DOMContentLoaded', () => {
   const vt = document.getElementById('versionTag');
   if (vt) vt.textContent = 'v' + APP_VERSION;
@@ -1024,13 +1024,13 @@ async function refreshAccountBadge() {
     });
     if (resp.ok) {
       const profile = await resp.json();
-      const isPro = profile.subscription_status === 'active';
-      currentPlanLimits = { maxAreaM2: isPro ? 1000000 : 160000, isPro };
+      const isPro = profile.subscription_status === 'active' || profile.is_unlimited;
+      currentPlanLimits = { maxAreaM2: profile.is_unlimited ? 999000000 : (isPro ? 1000000 : 160000), isPro };
       const used = profile.models_generated_this_month || 0;
-      document.getElementById('accountMenuPlan').textContent = isPro
-        ? t('account_menu_pro', used) : t('account_menu_free', used);
+      document.getElementById('accountMenuPlan').textContent = profile.is_unlimited
+        ? 'CEO MAX UNLIMITED' : (isPro ? t('account_menu_pro', used) : t('account_menu_free', used));
       document.getElementById('upgradeBtn').style.display = isPro ? 'none' : 'block';
-      document.getElementById('manageSubBtn').style.display = isPro ? 'block' : 'none';
+      document.getElementById('manageSubBtn').style.display = (isPro && !profile.is_unlimited) ? 'block' : 'none';
     }
   } catch (e) { /* backend not reachable yet -- badge still shows the email */ }
 }
