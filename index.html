@@ -678,7 +678,7 @@
 // (Todos son valores PÚBLICOS, seguros de dejar en el código del navegador.)
 // ---------------------------------------------------------------------
 const API_BASE = window.TERRAZO_API_BASE || "https://podit-laser-maps-backend.onrender.com";
-const APP_VERSION = "2026-07-15-04";
+const APP_VERSION = "5";
 document.addEventListener('DOMContentLoaded', () => {
   const vt = document.getElementById('versionTag');
   if (vt) vt.textContent = 'v' + APP_VERSION;
@@ -1070,6 +1070,13 @@ function formatErrorDetail(detail) {
 
 async function startCheckout() {
   if (!currentSession) { authIntent = 'checkout'; openAuthModal('login'); return; }
+  try {
+    const meResp = await fetch(`${API_BASE}/me`, { headers: { Authorization: `Bearer ${currentSession.access_token}` } });
+    if (meResp.ok) {
+      const profile = await meResp.json();
+      if (profile.subscription_status === 'active') { enterApp(); return; }
+    }
+  } catch (e) {}
   // Stripe requires real http(s) redirect URLs -- file:// (opening index.html
   // directly from disk, like during local testing) isn't valid for it. Once
   // this is deployed on a real domain, window.location.href works as-is.
@@ -1576,7 +1583,7 @@ function initMap() {
   // --- Circle: two clicks (center, then edge) ---------
   let circleCenter = null;
 
-  map.on('click', (e) => {
+  map.on('mousedown', (e) => {
     if (!drawing || currentShape !== 'circle') return;
     if (!circleCenter) {
       circleCenter = e.latlng;
