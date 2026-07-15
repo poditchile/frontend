@@ -621,6 +621,7 @@
       </div>
 
       <div class="side-section" style="flex:0;">
+        <button class="ghost-btn" id="previewBtn" disabled style="margin-bottom:8px;">👁 Vista previa (gratis)</button>
         <button class="cta" id="generateBtn" disabled>
           <svg class="btn-spinner" viewBox="0 0 50 50" fill="none">
             <circle cx="25" cy="25" r="20" stroke="rgba(255,255,255,0.35)" stroke-width="5"/>
@@ -666,11 +667,13 @@
     <div class="error-box" id="authError" style="display:none;"></div>
     <button class="cta" id="authSubmitBtn" style="margin-top:14px;" data-i18n="auth_login">Iniciar sesión</button>
     <button class="ghost-btn" id="authCancelBtn" style="margin-top:8px;" data-i18n="auth_cancel">Cancelar</button>
+    <a href="#" id="forgotPasswordLink" data-i18n="auth_forgot" style="display:block;text-align:center;margin-top:10px;font-size:0.8rem;">¿Olvidaste tu contraseña?</a>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 // ---------------------------------------------------------------------
@@ -679,7 +682,7 @@
 // (Todos son valores PÚBLICOS, seguros de dejar en el código del navegador.)
 // ---------------------------------------------------------------------
 const API_BASE = window.TERRAZO_API_BASE || "https://podit-laser-maps-backend.onrender.com";
-const APP_VERSION = "9";
+const APP_VERSION = "10";
 document.addEventListener('DOMContentLoaded', () => {
   const vt = document.getElementById('versionTag');
   if (vt) vt.textContent = 'v' + APP_VERSION;
@@ -759,7 +762,7 @@ const I18N = {
     account_menu_pro: (used) => `PODIT Pro · ${used}/15 modelos usados este mes`,
     btn_upgrade: "Actualizar a PODIT Pro", btn_manage_sub: "Gestionar suscripción", btn_logout: "Cerrar sesión",
     auth_login: "Iniciar sesión", auth_signup: "Registrarse", auth_create_account: "Crear cuenta",
-    auth_email: "Correo", auth_password: "Contraseña", auth_cancel: "Cancelar",
+    auth_email: "Correo", auth_password: "Contraseña", auth_cancel: "Cancelar", auth_forgot: "¿Olvidaste tu contraseña?",
     auth_email_ph: "tu@correo.com",
     auth_fill_fields: "Completa correo y contraseña.",
     auth_check_email: "Cuenta creada. Revisa tu correo para confirmar antes de iniciar sesión.",
@@ -855,7 +858,7 @@ const I18N = {
     account_menu_pro: (used) => `PODIT Pro · ${used}/15 models used this month`,
     btn_upgrade: "Upgrade to PODIT Pro", btn_manage_sub: "Manage subscription", btn_logout: "Log out",
     auth_login: "Log in", auth_signup: "Sign up", auth_create_account: "Create account",
-    auth_email: "Email", auth_password: "Password", auth_cancel: "Cancel",
+    auth_email: "Email", auth_password: "Password", auth_cancel: "Cancel", auth_forgot: "Forgot your password?",
     auth_email_ph: "you@email.com",
     auth_fill_fields: "Fill in your email and password.",
     auth_check_email: "Account created. Check your email to confirm before logging in.",
@@ -980,6 +983,21 @@ function closeAuthModal() {
 document.getElementById('authTabLogin').onclick = () => openAuthModal('login');
 document.getElementById('authTabSignup').onclick = () => openAuthModal('signup');
 document.getElementById('authCancelBtn').onclick = closeAuthModal;
+document.getElementById('forgotPasswordLink').onclick = async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('authEmail').value.trim();
+  const errBox = document.getElementById('authError');
+  if (!email) {
+    errBox.textContent = currentLang === 'es' ? 'Escribe tu correo arriba primero.' : 'Enter your email above first.';
+    errBox.style.display = 'block';
+    return;
+  }
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
+  errBox.style.display = 'block';
+  errBox.textContent = error
+    ? error.message
+    : (currentLang === 'es' ? 'Te mandamos un correo para restablecer tu contraseña.' : 'We sent you a password reset email.');
+};
 
 document.getElementById('authSubmitBtn').onclick = async () => {
   const email = document.getElementById('authEmail').value.trim();
@@ -1728,15 +1746,16 @@ function getScaleDenominator() {
 function refreshGenerateButton() {
   const btn = document.getElementById('generateBtn');
   const label = document.getElementById('btnLabel');
+  const pbtn = document.getElementById('previewBtn');
   if (btn.classList.contains('loading')) return; // don't override the spinner state
   if (currentBBox && currentAreaM2 > currentPlanLimits.maxAreaM2) {
-    btn.disabled = true;
+    btn.disabled = true; pbtn.disabled = true;
     label.textContent = t('btn_area_too_big');
   } else if (currentBBox) {
-    btn.disabled = false;
+    btn.disabled = false; pbtn.disabled = false;
     label.textContent = outputFormat === "dxf" ? t('btn_generate_dxf') : t('btn_generate_stl');
   } else {
-    btn.disabled = true;
+    btn.disabled = true; pbtn.disabled = true;
     label.textContent = t('btn_draw_first');
   }
 }
@@ -1924,6 +1943,71 @@ async function handleGenerate() {
   }
 }
 
+function parseBinarySTL(buf) {
+  const dv = new DataView(buf);
+  const n = dv.getUint32(80, true);
+  const positions = new Float32Array(n * 9);
+  let off = 84;
+  for (let i = 0; i < n; i++) {
+    off += 12; // skip normal
+    for (let v = 0; v < 3; v++) {
+      positions[i * 9 + v * 3] = dv.getFloat32(off, true); off += 4;
+      positions[i * 9 + v * 3 + 1] = dv.getFloat32(off, true); off += 4;
+      positions[i * 9 + v * 3 + 2] = dv.getFloat32(off, true); off += 4;
+    }
+    off += 2; // attribute byte count
+  }
+  return positions;
+}
+
+function renderSTLViewer(containerEl, positions) {
+  containerEl.innerHTML = '';
+  const width = containerEl.clientWidth || 500, height = 420;
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf3eee3);
+  const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100000);
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(width, height);
+  containerEl.appendChild(renderer.domElement);
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  const material = new THREE.MeshStandardMaterial({ color: 0x1b3a5c, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(geometry, material);
+  scene.add(mesh);
+
+  const light1 = new THREE.DirectionalLight(0xffffff, 1.0); light1.position.set(1, 1, 1); scene.add(light1);
+  const light2 = new THREE.AmbientLight(0xffffff, 0.6); scene.add(light2);
+
+  const sphere = geometry.boundingSphere;
+  const dist = sphere.radius * 2.6;
+  camera.position.set(dist, dist, dist);
+  camera.lookAt(sphere.center);
+
+  let dragging = false, lastX = 0, lastY = 0, rotY = 0, rotX = 0.5;
+  renderer.domElement.addEventListener('mousedown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
+  window.addEventListener('mouseup', () => dragging = false);
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    rotY += (e.clientX - lastX) * 0.01;
+    rotX += (e.clientY - lastY) * 0.01;
+    lastX = e.clientX; lastY = e.clientY;
+  });
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const r = sphere.radius * 2.6;
+    camera.position.x = sphere.center.x + r * Math.sin(rotY) * Math.cos(rotX);
+    camera.position.z = sphere.center.z + r * Math.cos(rotY) * Math.cos(rotX);
+    camera.position.y = sphere.center.y + r * Math.sin(rotX);
+    camera.lookAt(sphere.center);
+    renderer.render(scene, camera);
+  }
+  animate();
+}
+
 function renderStlResult(summary, terrainOnlyBlob, fullBlob) {
   document.getElementById('layoutEmpty').style.display = 'none';
   const content = document.getElementById('layoutContent');
@@ -1957,6 +2041,70 @@ function renderStlResult(summary, terrainOnlyBlob, fullBlob) {
 }
 
 document.getElementById('generateBtn').onclick = handleGenerate;
+document.getElementById('previewBtn').onclick = handlePreviewOnly;
+
+async function handlePreviewOnly() {
+  if (!currentBBox) return;
+  clearError();
+  const btn = document.getElementById('previewBtn');
+  btn.disabled = true;
+  const oldText = btn.textContent;
+  btn.textContent = currentLang === 'es' ? 'Cargando…' : 'Loading…';
+  try {
+    const scaleDenominator = getScaleDenominator();
+    const commonFields = {
+      south: currentBBox.south, west: currentBBox.west, north: currentBBox.north, east: currentBBox.east,
+      selection_shape: currentSelectionShape, scale_denominator: scaleDenominator,
+      include_streets: document.getElementById('includeStreets').checked,
+      include_buildings: document.getElementById('includeBuildings').checked,
+      manual_buildings: manualBuildings,
+      default_building_height_m: parseFloat(document.getElementById('defaultBuildingHeightM').value),
+      label_text_real_height_m: parseFloat(document.getElementById('labelTextHeightM').value),
+    };
+    document.getElementById('layoutEmpty').style.display = 'none';
+    const content = document.getElementById('layoutContent');
+    content.style.display = 'block';
+
+    if (outputFormat === 'stl') {
+      const payload = {
+        ...commonFields,
+        bed_width_mm: parseFloat(document.getElementById('sheetW').value),
+        bed_height_mm: parseFloat(document.getElementById('sheetH').value),
+        street_width_m: parseFloat(document.getElementById('streetWidthM').value),
+        street_raise_mm: parseFloat(document.getElementById('streetRaiseMm').value),
+      };
+      const resp = await postJSON('/preview-stl', payload);
+      const zipBlob = await resp.blob();
+      const zip = await JSZip.loadAsync(zipBlob);
+      const fileName = zip.file('terreno_completo.stl') ? 'terreno_completo.stl' : 'terreno_solo.stl';
+      const buf = await zip.file(fileName).async('arraybuffer');
+      const positions = parseBinarySTL(buf);
+      content.innerHTML = `<p class="hint" style="margin-bottom:8px;">${currentLang === 'es' ? 'Vista previa -- arrastra para rotar. No descargó ningún archivo.' : 'Preview -- drag to rotate. No file was downloaded.'}</p><div id="stlViewerBox"></div>`;
+      renderSTLViewer(document.getElementById('stlViewerBox'), positions);
+    } else {
+      const dxfPayload = {
+        ...commonFields,
+        sheet_width_mm: parseFloat(document.getElementById('sheetW').value),
+        sheet_height_mm: parseFloat(document.getElementById('sheetH').value),
+        material_thickness_mm: parseFloat(document.getElementById('thickness').value),
+        assembly_mode: ASSEMBLY_MODE,
+      };
+      const resp = await postJSON('/preview', dxfPayload);
+      const previewData = await resp.json();
+      renderLayoutTab(previewData, null);
+      const dl = document.getElementById('dlBtn');
+      if (dl) { dl.style.display = 'none'; }
+      content.insertAdjacentHTML('afterbegin', `<p class="hint" style="margin-bottom:8px;">${currentLang === 'es' ? 'Vista previa -- no descargó ningún archivo.' : 'Preview -- no file was downloaded.'}</p>`);
+    }
+    switchTab('layout');
+  } catch (e) {
+    const msg = (e instanceof TypeError) ? t('err_no_backend', API_BASE) : e.message;
+    showError(msg);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+}
 
 onAuthReady();
 applyTranslations();
