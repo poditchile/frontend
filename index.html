@@ -1565,40 +1565,24 @@ function initMap() {
     }
   });
 
-  // --- Circle: click-and-drag (mousedown -> mousemove -> mouseup) ---------
-  // A two-click flow is unreliable for circles: Leaflet treats any tiny
-  // mouse movement between press and release as a DRAG, not a click, and
-  // suppresses the 'click' event entirely -- exactly the kind of small
-  // wobble that naturally happens when a person is eyeballing a radius.
-  // Click-and-drag sidesteps that completely (it's also how every other
-  // map drawing tool implements circles).
-  let circleDragging = false;
+  // --- Circle: two clicks (center, then edge) ---------
   let circleCenter = null;
 
-  map.on('mousedown', (e) => {
+  map.on('click', (e) => {
     if (!drawing || currentShape !== 'circle') return;
-    circleDragging = true;
-    circleCenter = e.latlng;
-    map.dragging.disable();
-    document.getElementById('drawHint').textContent = t('hint_circle_release');
-  });
-
-  map.on('mouseup', (e) => {
-    if (!circleDragging) return;
-    circleDragging = false;
-    map.dragging.enable();
-    const radius = circleCenter.distanceTo(e.latlng);
-    if (radius < 1) {
-      // Essentially a click without dragging -- not a real circle, let the
-      // person try again instead of creating a degenerate 0m circle.
-      document.getElementById('drawHint').textContent = t('hint_circle_retry');
+    if (!circleCenter) {
+      circleCenter = e.latlng;
+      document.getElementById('drawHint').textContent = t('hint_circle_release');
       return;
     }
+    const radius = circleCenter.distanceTo(e.latlng);
+    if (radius < 1) return;
     const circle = L.circle(circleCenter, { radius, color: '#1B3A5C', weight: 2, fillOpacity: 0.08 });
     const circleArea = Math.PI * radius * radius;
     finishDrawing(circle.getBounds(), circle, 'circle',
                   { type: 'circle', center_lat: circleCenter.lat, center_lon: circleCenter.lng, radius_m: radius },
                   circleArea);
+    circleCenter = null;
   });
 
   function showLiveArea(areaM2) {
@@ -1607,7 +1591,7 @@ function initMap() {
   }
 
   map.on('mousemove', (e) => {
-    if (drawing && currentShape === 'circle' && circleDragging) {
+    if (drawing && currentShape === 'circle' && circleCenter) {
       const radius = circleCenter.distanceTo(e.latlng);
       if (previewLayer) map.removeLayer(previewLayer);
       previewLayer = L.circle(circleCenter, { radius, color: '#1B3A5C', weight: 2, dashArray: '4 4', fillOpacity: 0.05 }).addTo(map);
