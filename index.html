@@ -538,13 +538,7 @@
       <div class="side-section" id="streetsBuildingsSection">
         <p class="eyebrow" data-i18n="lbl_osm">02 — Calles y edificios</p>
         <h2 data-i18n="h_osm">Datos de OpenStreetMap</h2>
-        <div class="field checkbox-field">
-          <label><input type="checkbox" id="includeStreets"> <span data-i18n="chk_streets">Incluir calles con nombre</span></label>
-        </div>
-        <div class="field checkbox-field">
-          <label><input type="checkbox" id="includeBuildings"> <span data-i18n="chk_buildings">Incluir edificios de OSM</span></label>
-        </div>
-        <p class="hint" data-i18n="hint_osm">Se graban en todas las capas (según lo que se ve en cada una); la placa base además muestra la referencia completa. En STL se extruyen en 3D.</p>
+        <p class="hint" data-i18n="hint_osm">Se incluyen automáticamente según el formato de salida que elijas abajo.</p>
 
         <div class="field row2">
           <div>
@@ -712,7 +706,7 @@
 // (Todos son valores PÚBLICOS, seguros de dejar en el código del navegador.)
 // ---------------------------------------------------------------------
 const API_BASE = window.TERRAZO_API_BASE || "https://podit-laser-maps-backend.onrender.com";
-const APP_VERSION = "15";
+const APP_VERSION = "16";
 document.addEventListener('DOMContentLoaded', () => {
   const vt = document.getElementById('versionTag');
   if (vt) vt.textContent = 'v' + APP_VERSION;
@@ -767,7 +761,7 @@ const I18N = {
     lbl_osm: "02 — Calles y edificios", h_osm: "Datos de OpenStreetMap",
     chk_streets: "Incluir calles con nombre", chk_buildings: "Incluir edificios de OSM",
     chk_flat_mode: "Solo placa base (sin cotas -- para sitios planos)",
-    hint_osm: "En DXF se graban en la capa base. En STL se extruyen en 3D.",
+    hint_osm: "Se incluyen automáticamente según el formato de salida que elijas abajo.",
     lbl_default_height: "Altura por defecto si OSM no la tiene (m)", lbl_label_height: "Altura de letra en calles (m reales)",
     lbl_street_width: "Ancho de calle (m)", lbl_street_raise: "Extrusión hacia arriba (mm)",
     hint_manual_count: "Edificios agregados a mano:",
@@ -867,7 +861,7 @@ const I18N = {
     lbl_osm: "02 — Streets and buildings", h_osm: "OpenStreetMap data",
     chk_streets: "Include named streets", chk_buildings: "Include OSM buildings",
     chk_flat_mode: "Base plate only (no elevation levels -- for flat sites)",
-    hint_osm: "In DXF they're engraved on the base layer. In STL they're extruded in 3D.",
+    hint_osm: "Included automatically based on the output format you pick below.",
     lbl_default_height: "Default height if OSM doesn't have it (m)", lbl_label_height: "Street label letter height (real m)",
     lbl_street_width: "Street width (m)", lbl_street_raise: "Upward extrusion (mm)",
     hint_manual_count: "Manually added buildings:",
@@ -1211,8 +1205,7 @@ function collectCurrentParams() {
     thickness: document.getElementById('thickness').value,
     outputFormat,
     outputSubMode,
-    includeStreets: document.getElementById('includeStreets').checked,
-    includeBuildings: document.getElementById('includeBuildings').checked,
+    
     defaultBuildingHeightM: document.getElementById('defaultBuildingHeightM').value,
     labelTextHeightM: document.getElementById('labelTextHeightM').value,
     streetWidthM: document.getElementById('streetWidthM').value,
@@ -1305,8 +1298,7 @@ function applyProjectParams(params) {
     if (params.sheetW) document.getElementById('sheetW').value = params.sheetW;
     if (params.sheetH) document.getElementById('sheetH').value = params.sheetH;
     if (params.thickness) document.getElementById('thickness').value = params.thickness;
-    document.getElementById('includeStreets').checked = !!params.includeStreets;
-    document.getElementById('includeBuildings').checked = !!params.includeBuildings;
+    
     if (params.defaultBuildingHeightM) document.getElementById('defaultBuildingHeightM').value = params.defaultBuildingHeightM;
     if (params.labelTextHeightM) document.getElementById('labelTextHeightM').value = params.labelTextHeightM;
     if (params.streetWidthM) document.getElementById('streetWidthM').value = params.streetWidthM;
@@ -1458,6 +1450,10 @@ let points = [];        // polygon vertices / circle center / building-in-progre
 let previewLayer = null;
 let finalLayer = null;
 const manualBuildings = [];  // feature removed -- kept as an always-empty array for API payload compat
+
+function wantsStreetsBuildings(mode) {
+  return mode !== 'dxf_levels_only' && mode !== 'stl_terrain_only';
+}
 
 function metersBetween(lat1, lon1, lat2, lon2) {
   const R = 6371000, toRad = d => d * Math.PI / 180;
@@ -1883,8 +1879,8 @@ async function handleGenerate() {
     north: currentBBox.north, east: currentBBox.east,
     selection_shape: currentSelectionShape,
     scale_denominator: scaleDenominator,
-    include_streets: document.getElementById('includeStreets').checked,
-    include_buildings: document.getElementById('includeBuildings').checked,
+    include_streets: wantsStreetsBuildings(outputSubMode),
+    include_buildings: wantsStreetsBuildings(outputSubMode),
     manual_buildings: manualBuildings,
     default_building_height_m: parseFloat(document.getElementById('defaultBuildingHeightM').value),
     label_text_real_height_m: parseFloat(document.getElementById('labelTextHeightM').value),
@@ -1899,8 +1895,6 @@ async function handleGenerate() {
         street_width_m: parseFloat(document.getElementById('streetWidthM').value),
         street_raise_mm: parseFloat(document.getElementById('streetRaiseMm').value),
         stl_mode: outputSubMode.replace('stl_', ''),
-        include_streets: outputSubMode === 'stl_full' ? true : commonFields.include_streets,
-        include_buildings: outputSubMode === 'stl_full' ? true : commonFields.include_buildings,
       };
       const stlResp = await postJSON('/generate-stl', stlPayload);
       const summaryHeader = stlResp.headers.get('X-Model-Summary');
@@ -2056,8 +2050,8 @@ async function handlePreviewOnly() {
     const commonFields = {
       south: currentBBox.south, west: currentBBox.west, north: currentBBox.north, east: currentBBox.east,
       selection_shape: currentSelectionShape, scale_denominator: scaleDenominator,
-      include_streets: document.getElementById('includeStreets').checked,
-      include_buildings: document.getElementById('includeBuildings').checked,
+      include_streets: wantsStreetsBuildings(outputSubMode),
+      include_buildings: wantsStreetsBuildings(outputSubMode),
       manual_buildings: manualBuildings,
       default_building_height_m: parseFloat(document.getElementById('defaultBuildingHeightM').value),
       label_text_real_height_m: parseFloat(document.getElementById('labelTextHeightM').value),
@@ -2074,8 +2068,6 @@ async function handlePreviewOnly() {
         street_width_m: parseFloat(document.getElementById('streetWidthM').value),
         street_raise_mm: parseFloat(document.getElementById('streetRaiseMm').value),
         stl_mode: outputSubMode.replace('stl_', ''),
-        include_streets: outputSubMode === 'stl_full' ? true : commonFields.include_streets,
-        include_buildings: outputSubMode === 'stl_full' ? true : commonFields.include_buildings,
       };
       const resp = await postJSON('/preview-stl', payload);
       const zipBlob = await resp.blob();
