@@ -532,7 +532,7 @@
         </div>
       </div>
 
-      <div class="side-section">
+      <div class="side-section" id="streetsBuildingsSection">
         <p class="eyebrow" data-i18n="lbl_osm">02 — Calles y edificios</p>
         <h2 data-i18n="h_osm">Datos de OpenStreetMap</h2>
         <div class="field checkbox-field">
@@ -591,10 +591,19 @@
 
         <div class="field">
           <label data-i18n="lbl_format">Formato de salida</label>
-          <div class="mode-toggle">
-            <button type="button" data-format="dxf" id="formatDxf" class="active" data-i18n="fmt_dxf">DXF · corte láser</button>
-            <button type="button" data-format="stl" id="formatStl" data-i18n="fmt_stl">STL · impresión 3D</button>
-          </div>
+          <select id="outputMode">
+            <optgroup label="DXF · corte láser" data-i18n-label="fmt_dxf">
+              <option value="dxf_full" selected data-i18n="mode_dxf_full">Corte láser completo</option>
+              <option value="dxf_base_with_levels" data-i18n="mode_dxf_base_with_levels">Base con cotas</option>
+              <option value="dxf_base_flat" data-i18n="mode_dxf_base_flat">Base sin cotas</option>
+              <option value="dxf_levels_only" data-i18n="mode_dxf_levels_only">Solo cotas</option>
+            </optgroup>
+            <optgroup label="STL · impresión 3D" data-i18n-label="fmt_stl">
+              <option value="stl_full" data-i18n="mode_stl_full">Impresión 3D completo</option>
+              <option value="stl_terrain_only" data-i18n="mode_stl_terrain_only">Solo terreno</option>
+            </optgroup>
+          </select>
+          <p class="hint" id="outputModeHint" style="margin-top:6px;"></p>
         </div>
 
         <div class="field row2">
@@ -682,7 +691,7 @@
 // (Todos son valores PÚBLICOS, seguros de dejar en el código del navegador.)
 // ---------------------------------------------------------------------
 const API_BASE = window.TERRAZO_API_BASE || "https://podit-laser-maps-backend.onrender.com";
-const APP_VERSION = "11";
+const APP_VERSION = "12";
 document.addEventListener('DOMContentLoaded', () => {
   const vt = document.getElementById('versionTag');
   if (vt) vt.textContent = 'v' + APP_VERSION;
@@ -736,6 +745,7 @@ const I18N = {
     area_bar_free: "Gratis hasta", area_bar_pro: "Pro hasta 1,0 km²",
     lbl_osm: "02 — Calles y edificios", h_osm: "Datos de OpenStreetMap",
     chk_streets: "Incluir calles con nombre", chk_buildings: "Incluir edificios de OSM",
+    chk_flat_mode: "Solo placa base (sin cotas -- para sitios planos)",
     hint_osm: "En DXF se graban en la capa base. En STL se extruyen en 3D.",
     lbl_default_height: "Altura por defecto si OSM no la tiene (m)", lbl_label_height: "Altura de letra en calles (m reales)",
     lbl_street_width: "Ancho de calle (m)", lbl_street_raise: "Extrusión hacia arriba (mm)",
@@ -743,6 +753,9 @@ const I18N = {
     lbl_scale_output: "03 — Escala y salida", h_fabrication: "Parámetros de fabricación",
     lbl_scale: "Escala del modelo", opt_custom: "Personalizado…",
     lbl_format: "Formato de salida", fmt_dxf: "DXF · corte láser", fmt_stl: "STL · impresión 3D",
+    mode_dxf_full: "Corte láser completo", mode_dxf_base_with_levels: "Base con cotas",
+    mode_dxf_base_flat: "Base sin cotas", mode_dxf_levels_only: "Solo cotas",
+    mode_stl_full: "Impresión 3D completo", mode_stl_terrain_only: "Solo terreno",
     lbl_sheet_w: "Ancho plancha (mm)", lbl_sheet_h: "Largo plancha (mm)",
     lbl_bed_w: "Ancho cama impresora (mm)", lbl_bed_h: "Largo cama impresora (mm)",
     hint_plate_dxf: "Tamaño de la plancha láser.", hint_plate_stl: "Tamaño de la cama de tu impresora 3D (ej. 220x220mm).",
@@ -832,6 +845,7 @@ const I18N = {
     area_bar_free: "Free up to", area_bar_pro: "Pro up to 1.0 km²",
     lbl_osm: "02 — Streets and buildings", h_osm: "OpenStreetMap data",
     chk_streets: "Include named streets", chk_buildings: "Include OSM buildings",
+    chk_flat_mode: "Base plate only (no elevation levels -- for flat sites)",
     hint_osm: "In DXF they're engraved on the base layer. In STL they're extruded in 3D.",
     lbl_default_height: "Default height if OSM doesn't have it (m)", lbl_label_height: "Street label letter height (real m)",
     lbl_street_width: "Street width (m)", lbl_street_raise: "Upward extrusion (mm)",
@@ -839,6 +853,9 @@ const I18N = {
     lbl_scale_output: "03 — Scale and output", h_fabrication: "Fabrication parameters",
     lbl_scale: "Model scale", opt_custom: "Custom…",
     lbl_format: "Output format", fmt_dxf: "DXF · laser cutting", fmt_stl: "STL · 3D printing",
+    mode_dxf_full: "Full laser cutting", mode_dxf_base_with_levels: "Base with reference levels",
+    mode_dxf_base_flat: "Base only (no levels)", mode_dxf_levels_only: "Levels only",
+    mode_stl_full: "Full 3D print", mode_stl_terrain_only: "Terrain only",
     lbl_sheet_w: "Sheet width (mm)", lbl_sheet_h: "Sheet length (mm)",
     lbl_bed_w: "Printer bed width (mm)", lbl_bed_h: "Printer bed length (mm)",
     hint_plate_dxf: "Laser sheet size.", hint_plate_stl: "Your 3D printer's bed size (e.g. 220x220mm).",
@@ -913,6 +930,10 @@ function applyTranslations() {
   document.querySelectorAll('[data-i18n-title]').forEach(el => {
     const key = el.getAttribute('data-i18n-title');
     if (I18N[currentLang][key] !== undefined) el.title = t(key);
+  });
+  document.querySelectorAll('[data-i18n-label]').forEach(el => {
+    const key = el.getAttribute('data-i18n-label');
+    if (I18N[currentLang][key] !== undefined) el.label = t(key);
   });
   document.documentElement.lang = currentLang;
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === currentLang));
@@ -1168,6 +1189,7 @@ function collectCurrentParams() {
     sheetH: document.getElementById('sheetH').value,
     thickness: document.getElementById('thickness').value,
     outputFormat,
+    outputSubMode,
     includeStreets: document.getElementById('includeStreets').checked,
     includeBuildings: document.getElementById('includeBuildings').checked,
     defaultBuildingHeightM: document.getElementById('defaultBuildingHeightM').value,
@@ -1268,7 +1290,11 @@ function applyProjectParams(params) {
     if (params.labelTextHeightM) document.getElementById('labelTextHeightM').value = params.labelTextHeightM;
     if (params.streetWidthM) document.getElementById('streetWidthM').value = params.streetWidthM;
     if (params.streetRaiseMm) document.getElementById('streetRaiseMm').value = params.streetRaiseMm;
-    if (params.outputFormat) setFormat(params.outputFormat);
+    if (params.outputSubMode) {
+      setOutputMode(params.outputSubMode);
+    } else if (params.outputFormat) {
+      setOutputMode(params.outputFormat === 'stl' ? 'stl_full' : 'dxf_full');
+    }
   } catch (e) {
     console.error('applyProjectParams: failed restoring basic fields', e);
   }
@@ -1736,18 +1762,37 @@ function initMap() {
 const ASSEMBLY_MODE = "A"; // Mode B (hollow+guides) needs more work -- not offered in the UI for now
 
 let outputFormat = "dxf";
-document.getElementById('formatDxf').onclick = () => setFormat("dxf");
-document.getElementById('formatStl').onclick = () => setFormat("stl");
-function setFormat(fmt) {
-  outputFormat = fmt;
-  document.getElementById('formatDxf').classList.toggle('active', fmt === "dxf");
-  document.getElementById('formatStl').classList.toggle('active', fmt === "stl");
-  document.getElementById('thicknessField').style.display = fmt === "dxf" ? 'block' : 'none';
-  document.getElementById('sheetWLabel').textContent = fmt === "dxf" ? t('lbl_sheet_w') : t('lbl_bed_w');
-  document.getElementById('sheetHLabel').textContent = fmt === "dxf" ? t('lbl_sheet_h') : t('lbl_bed_h');
-  document.getElementById('plateHint').textContent = fmt === "dxf" ? t('hint_plate_dxf') : t('hint_plate_stl');
-  document.getElementById('tabBtnLayout').textContent = fmt === "dxf" ? t('tab_layout') : t('tab_layout_stl');
-  document.getElementById('stlStreetFields').style.display = fmt === "stl" ? 'block' : 'none';
+let outputSubMode = "dxf_full";
+document.getElementById('outputMode').onchange = (e) => setOutputMode(e.target.value);
+
+function setOutputMode(mode) {
+  outputSubMode = mode;
+  outputFormat = mode.startsWith('stl') ? 'stl' : 'dxf';
+  document.getElementById('outputMode').value = mode;
+
+  document.getElementById('thicknessField').style.display = outputFormat === "dxf" ? 'block' : 'none';
+  document.getElementById('sheetWLabel').textContent = outputFormat === "dxf" ? t('lbl_sheet_w') : t('lbl_bed_w');
+  document.getElementById('sheetHLabel').textContent = outputFormat === "dxf" ? t('lbl_sheet_h') : t('lbl_bed_h');
+  document.getElementById('plateHint').textContent = outputFormat === "dxf" ? t('hint_plate_dxf') : t('hint_plate_stl');
+  document.getElementById('tabBtnLayout').textContent = outputFormat === "dxf" ? t('tab_layout') : t('tab_layout_stl');
+  document.getElementById('stlStreetFields').style.display = mode === "stl_full" ? 'block' : 'none';
+
+  // Modes that never touch streets/buildings (a plain elevation-levels-only
+  // DXF, or a terrain-only STL) don't need that whole settings section --
+  // showing it would just be confusing since nothing there applies.
+  const usesStreetsBuildings = (mode !== 'dxf_levels_only' && mode !== 'stl_terrain_only');
+  document.getElementById('streetsBuildingsSection').style.display = usesStreetsBuildings ? 'block' : 'none';
+
+  const hints = {
+    dxf_full: currentLang === 'es' ? 'Todas las capas: base + niveles apilados, calles y edificios.' : 'Every layer: base + stacked levels, streets and buildings.',
+    dxf_base_with_levels: currentLang === 'es' ? 'Solo la plancha base, mostrando el resto de niveles como referencia -- para reimprimir solo la base.' : 'Only the base sheet, showing other levels as a reference -- to reprint just the base.',
+    dxf_base_flat: currentLang === 'es' ? 'Solo la plancha base, sin apilar niveles -- ideal para sitios planos (ej. zonas urbanas densas).' : 'Only the base sheet, no level stacking -- ideal for flat sites (e.g. dense urban areas).',
+    dxf_levels_only: currentLang === 'es' ? 'Todos los niveles apilados, sin la base -- para cuando ya tienes la base cortada.' : 'Every stacked level, without the base -- for when you already have the base cut.',
+    stl_full: currentLang === 'es' ? 'Terreno + calles y edificios extruidos.' : 'Terrain + extruded streets and buildings.',
+    stl_terrain_only: currentLang === 'es' ? 'Solo la malla del terreno, sin calles ni edificios.' : 'Terrain mesh only, no streets or buildings.',
+  };
+  document.getElementById('outputModeHint').textContent = hints[mode] || '';
+
   refreshGenerateButton();
 }
 
@@ -1811,21 +1856,15 @@ function renderLayoutTab(previewData, blobUrl) {
         ${buildingRows}
       </div>
       ${s.street_building_warning ? `<div class="error-box" style="margin-top:10px;">${s.street_building_warning}</div>` : ''}
+      <p class="hint" style="margin:6px 0 0;">${currentLang === 'es' ? 'Vista previa simplificada (solo el corte) -- las calles y edificios sí van grabados en el DXF real.' : 'Simplified preview (cut outline only) -- streets and buildings ARE engraved in the real DXF.'}</p>
       <button class="download-btn" id="dlBtn" ${blobUrl ? '' : 'disabled'}>
         ${blobUrl ? t('btn_download_sheets') : t('btn_preparing')}
       </button>
     </div>`;
 
-  const LAYER_COLORS = {
-    '02_ENGRAVE': '#2A6FE0',
-    '04_CALLES': '#00A8A8',
-    '05_EDIFICIOS': '#C13FC1',
-    '06_REFERENCIA': '#B8960C',
-  };
-
   const W = previewData.sheet_width_mm, H = previewData.sheet_height_mm;
   for (const sheet of previewData.sheets) {
-    const shapes = sheet.parts.map(part => {
+    const polys = sheet.parts.map(part => {
       const ext = part.exterior.map(p => p.join(',')).join(' L ');
       let d = `M ${ext} Z`;
       for (const hole of part.holes) {
@@ -1834,14 +1873,8 @@ function renderLayoutTab(previewData, blobUrl) {
       }
       const cx = part.exterior.reduce((a, p) => a + p[0], 0) / part.exterior.length;
       const cy = part.exterior.reduce((a, p) => a + p[1], 0) / part.exterior.length;
-      const cutPath = `<path d="${d}" fill="#fff" stroke="#D0342C" stroke-width="1.4"/>`;
-      const engraved = (part.engrave_lines || []).map(el => {
-        const pts = el.points.map(p => p.join(',')).join(' ');
-        const color = LAYER_COLORS[el.layer] || '#999';
-        return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="0.8"/>`;
-      }).join('');
-      const label = `<text x="${cx}" y="${cy}" class="part-label" text-anchor="middle" fill="#2A2822">${part.id}</text>`;
-      return cutPath + engraved + label;
+      return `<path d="${d}" class="part-shape${part.is_fragment ? ' fragment' : ''}"/>
+              <text x="${cx}" y="${cy}" class="part-label" text-anchor="middle">${part.id}</text>`;
     }).join('');
 
     html += `
@@ -1850,7 +1883,7 @@ function renderLayoutTab(previewData, blobUrl) {
         <div class="sheet-svg-wrap">
           <svg viewBox="0 0 ${W} ${H}" style="transform:scaleY(-1)">
             <rect x="0" y="0" width="${W}" height="${H}" fill="#fff" stroke="#DEDACB" stroke-width="2"/>
-            ${shapes}
+            ${polys}
           </svg>
         </div>
       </div>`;
@@ -1911,17 +1944,16 @@ async function handleGenerate() {
         bed_height_mm: parseFloat(document.getElementById('sheetH').value),
         street_width_m: parseFloat(document.getElementById('streetWidthM').value),
         street_raise_mm: parseFloat(document.getElementById('streetRaiseMm').value),
+        stl_mode: outputSubMode,
       };
       const stlResp = await postJSON('/generate-stl', stlPayload);
       const summaryHeader = stlResp.headers.get('X-Model-Summary');
       const summary = summaryHeader ? JSON.parse(summaryHeader) : {};
       const zipBlob = await stlResp.blob();
       const zip = await JSZip.loadAsync(zipBlob);
-      const terrainOnlyBlob = await zip.file('terreno_solo.stl').async('blob');
-      const fullBlob = zip.file('terreno_completo.stl')
-        ? await zip.file('terreno_completo.stl').async('blob')
-        : null;
-      renderStlResult(summary, terrainOnlyBlob, fullBlob);
+      const fileName = zip.file('terreno_completo.stl') ? 'terreno_completo.stl' : 'terreno_solo.stl';
+      const blob = await zip.file(fileName).async('blob');
+      renderStlResult(summary, blob, fileName);
       switchTab('layout');
     } else {
       const dxfPayload = {
@@ -1930,6 +1962,7 @@ async function handleGenerate() {
         sheet_height_mm: parseFloat(document.getElementById('sheetH').value),
         material_thickness_mm: parseFloat(document.getElementById('thickness').value),
         assembly_mode: ASSEMBLY_MODE,
+        output_mode: outputSubMode,
       };
       const [previewResp, generateResp] = await Promise.all([
         postJSON('/preview', dxfPayload),
@@ -2027,7 +2060,7 @@ function renderSTLViewer(containerEl, positions) {
   animate();
 }
 
-function renderStlResult(summary, terrainOnlyBlob, fullBlob) {
+function renderStlResult(summary, blob, fileName) {
   document.getElementById('layoutEmpty').style.display = 'none';
   const content = document.getElementById('layoutContent');
   content.style.display = 'block';
@@ -2039,24 +2072,17 @@ function renderStlResult(summary, terrainOnlyBlob, fullBlob) {
       <div class="summary-list">
         <div><span>${t('summary_model_size')}</span><span>${summary.footprint_mm ? summary.footprint_mm.join(' x ') + ' mm' : '—'}</span></div>
         <div><span>${t('summary_fits_bed')}</span><span>${summary.fits_bed ? t('yes') : t('no')}</span></div>
-        <div><span>${t('summary_streets_incl')}</span><span>${summary.num_streets}</span></div>
-        <div><span>${t('summary_buildings_incl')}</span><span>${summary.num_buildings}</span></div>
+        <div><span>${t('summary_streets_incl')}</span><span>${summary.num_streets || 0}</span></div>
+        <div><span>${t('summary_buildings_incl')}</span><span>${summary.num_buildings || 0}</span></div>
       </div>
       ${defaultedNote}
       ${warn ? `<div class="error-box" style="margin-top:10px;">${warn}</div>` : ''}
-      <button class="download-btn" id="dlTerrainBtn">${t('btn_download_terrain')}</button>
-      ${fullBlob ? `<button class="download-btn" id="dlFullBtn">${t('btn_download_full')}</button>` : ''}
+      <button class="download-btn" id="dlStlBtn">${t('btn_download_sheets')}</button>
     </div>`;
-  document.getElementById('dlTerrainBtn').onclick = () => {
+  document.getElementById('dlStlBtn').onclick = () => {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(terrainOnlyBlob); a.download = 'terreno_solo.stl'; a.click();
+    a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
   };
-  if (fullBlob) {
-    document.getElementById('dlFullBtn').onclick = () => {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(fullBlob); a.download = 'terreno_completo.stl'; a.click();
-    };
-  }
 }
 
 document.getElementById('generateBtn').onclick = handleGenerate;
@@ -2091,6 +2117,7 @@ async function handlePreviewOnly() {
         bed_height_mm: parseFloat(document.getElementById('sheetH').value),
         street_width_m: parseFloat(document.getElementById('streetWidthM').value),
         street_raise_mm: parseFloat(document.getElementById('streetRaiseMm').value),
+        stl_mode: outputSubMode,
       };
       const resp = await postJSON('/preview-stl', payload);
       const zipBlob = await resp.blob();
@@ -2107,6 +2134,7 @@ async function handlePreviewOnly() {
         sheet_height_mm: parseFloat(document.getElementById('sheetH').value),
         material_thickness_mm: parseFloat(document.getElementById('thickness').value),
         assembly_mode: ASSEMBLY_MODE,
+        output_mode: outputSubMode,
       };
       const resp = await postJSON('/preview', dxfPayload);
       const previewData = await resp.json();
@@ -2125,6 +2153,7 @@ async function handlePreviewOnly() {
   }
 }
 
+setOutputMode('dxf_full');
 onAuthReady();
 applyTranslations();
 </script>
