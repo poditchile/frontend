@@ -1655,7 +1655,13 @@ function initMap() {
     if (radius < 1) return;
     const circle = L.circle(circleCenter, { radius, color: '#1B3A5C', weight: 2, fillOpacity: 0.08 });
     const circleArea = Math.PI * radius * radius;
-    finishDrawing(circleCenter.toBounds(radius * 2), circle, 'circle',
+    // Leaflet's toBounds() uses a spherical-earth approximation; the
+    // backend clips the TRUE circle using an accurate UTM projection.
+    // Pad the requested data area generously so that small mismatch never
+    // leaves the backend without data right at the circle's own edge --
+    // extra fetched area is harmless (clipped away precisely afterward).
+    const fetchBounds = circleCenter.toBounds(radius * 2 * 1.15);
+    finishDrawing(fetchBounds, circle, 'circle',
                   { type: 'circle', center_lat: circleCenter.lat, center_lon: circleCenter.lng, radius_m: radius },
                   circleArea);
     circleCenter = null;
