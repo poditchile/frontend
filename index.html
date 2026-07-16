@@ -62,6 +62,11 @@
   select:focus,input:focus{outline:none;border-color:var(--accent);}
 
   .mode-toggle{display:flex;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-top:6px;}
+  .output-group-label{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);margin:6px 0 4px;}
+  .output-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .output-mode-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);color:var(--ink);cursor:pointer;font-size:0.72rem;text-align:center;line-height:1.2;}
+  .output-mode-btn svg{width:28px;height:28px;}
+  .output-mode-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
   .mode-toggle button{flex:1;padding:8px 6px;background:var(--paper);border:none;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:0.74rem;color:var(--ink-soft);border-right:1px solid var(--line);}
   .mode-toggle button:last-child{border-right:none;}
   .mode-toggle button.active{background:var(--accent);color:#fff;}
@@ -591,19 +596,38 @@
 
         <div class="field">
           <label data-i18n="lbl_format">Formato de salida</label>
-          <select id="outputMode">
-            <optgroup label="DXF · corte láser" data-i18n-label="fmt_dxf">
-              <option value="dxf_full" selected data-i18n="mode_dxf_full">Corte láser completo</option>
-              <option value="dxf_base_with_levels" data-i18n="mode_dxf_base_with_levels">Base con cotas</option>
-              <option value="dxf_base_flat" data-i18n="mode_dxf_base_flat">Base sin cotas</option>
-              <option value="dxf_levels_only" data-i18n="mode_dxf_levels_only">Solo cotas</option>
-            </optgroup>
-            <optgroup label="STL · impresión 3D" data-i18n-label="fmt_stl">
-              <option value="stl_full" data-i18n="mode_stl_full">Impresión 3D completo</option>
-              <option value="stl_terrain_only" data-i18n="mode_stl_terrain_only">Solo terreno</option>
-            </optgroup>
-          </select>
-          <p class="hint" id="outputModeHint" style="margin-top:6px;"></p>
+          <p class="output-group-label" data-i18n="fmt_dxf">DXF · corte láser</p>
+          <div class="output-mode-grid">
+            <button type="button" class="output-mode-btn active" data-mode="dxf_full">
+              <svg viewBox="0 0 40 40"><rect x="8" y="24" width="24" height="4" fill="currentColor" opacity="0.35"/><rect x="10" y="18" width="20" height="4" fill="currentColor" opacity="0.55"/><rect x="12" y="12" width="16" height="4" fill="currentColor" opacity="0.75"/><rect x="14" y="6" width="12" height="4" fill="currentColor"/></svg>
+              <span data-i18n="mode_dxf_full">Corte láser completo</span>
+            </button>
+            <button type="button" class="output-mode-btn" data-mode="dxf_base_with_levels">
+              <svg viewBox="0 0 40 40"><rect x="8" y="24" width="24" height="6" fill="currentColor"/><rect x="10" y="19" width="20" height="1.5" fill="currentColor" opacity="0.4"/><rect x="12" y="15" width="16" height="1.5" fill="currentColor" opacity="0.4"/><rect x="14" y="11" width="12" height="1.5" fill="currentColor" opacity="0.4"/></svg>
+              <span data-i18n="mode_dxf_base_with_levels">Base con cotas</span>
+            </button>
+            <button type="button" class="output-mode-btn" data-mode="dxf_base_flat">
+              <svg viewBox="0 0 40 40"><rect x="8" y="24" width="24" height="6" fill="currentColor"/></svg>
+              <span data-i18n="mode_dxf_base_flat">Base sin cotas</span>
+            </button>
+            <button type="button" class="output-mode-btn" data-mode="dxf_levels_only">
+              <svg viewBox="0 0 40 40"><rect x="10" y="18" width="20" height="4" fill="currentColor" opacity="0.55"/><rect x="12" y="12" width="16" height="4" fill="currentColor" opacity="0.75"/><rect x="14" y="6" width="12" height="4" fill="currentColor"/></svg>
+              <span data-i18n="mode_dxf_levels_only">Solo cotas</span>
+            </button>
+          </div>
+          <p class="output-group-label" data-i18n="fmt_stl" style="margin-top:12px;">STL · impresión 3D</p>
+          <div class="output-mode-grid">
+            <button type="button" class="output-mode-btn" data-mode="stl_full">
+              <svg viewBox="0 0 40 40"><path d="M6 30 L18 10 L26 20 L34 8 L34 30 Z" fill="currentColor" opacity="0.6"/><rect x="14" y="24" width="4" height="6" fill="currentColor"/><rect x="22" y="22" width="4" height="8" fill="currentColor"/></svg>
+              <span data-i18n="mode_stl_full">Impresión 3D completo</span>
+            </button>
+            <button type="button" class="output-mode-btn" data-mode="stl_terrain_only">
+              <svg viewBox="0 0 40 40"><path d="M6 30 L18 10 L26 20 L34 8 L34 30 Z" fill="currentColor" opacity="0.85"/></svg>
+              <span data-i18n="mode_stl_terrain_only">Solo terreno</span>
+            </button>
+          </div>
+          <input type="hidden" id="outputMode" value="dxf_full">
+          <p class="hint" id="outputModeHint" style="margin-top:8px;"></p>
         </div>
 
         <div class="field row2">
@@ -691,7 +715,7 @@
 // (Todos son valores PÚBLICOS, seguros de dejar en el código del navegador.)
 // ---------------------------------------------------------------------
 const API_BASE = window.TERRAZO_API_BASE || "https://podit-laser-maps-backend.onrender.com";
-const APP_VERSION = "12";
+const APP_VERSION = "13";
 document.addEventListener('DOMContentLoaded', () => {
   const vt = document.getElementById('versionTag');
   if (vt) vt.textContent = 'v' + APP_VERSION;
@@ -1763,12 +1787,15 @@ const ASSEMBLY_MODE = "A"; // Mode B (hollow+guides) needs more work -- not offe
 
 let outputFormat = "dxf";
 let outputSubMode = "dxf_full";
-document.getElementById('outputMode').onchange = (e) => setOutputMode(e.target.value);
+document.querySelectorAll('.output-mode-btn').forEach(btn => {
+  btn.onclick = () => setOutputMode(btn.dataset.mode);
+});
 
 function setOutputMode(mode) {
   outputSubMode = mode;
   outputFormat = mode.startsWith('stl') ? 'stl' : 'dxf';
   document.getElementById('outputMode').value = mode;
+  document.querySelectorAll('.output-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
 
   document.getElementById('thicknessField').style.display = outputFormat === "dxf" ? 'block' : 'none';
   document.getElementById('sheetWLabel').textContent = outputFormat === "dxf" ? t('lbl_sheet_w') : t('lbl_bed_w');
@@ -1944,7 +1971,7 @@ async function handleGenerate() {
         bed_height_mm: parseFloat(document.getElementById('sheetH').value),
         street_width_m: parseFloat(document.getElementById('streetWidthM').value),
         street_raise_mm: parseFloat(document.getElementById('streetRaiseMm').value),
-        stl_mode: outputSubMode,
+        stl_mode: outputSubMode.replace('stl_', ''),
       };
       const stlResp = await postJSON('/generate-stl', stlPayload);
       const summaryHeader = stlResp.headers.get('X-Model-Summary');
@@ -1962,7 +1989,7 @@ async function handleGenerate() {
         sheet_height_mm: parseFloat(document.getElementById('sheetH').value),
         material_thickness_mm: parseFloat(document.getElementById('thickness').value),
         assembly_mode: ASSEMBLY_MODE,
-        output_mode: outputSubMode,
+        output_mode: outputSubMode.replace('dxf_', ''),
       };
       const [previewResp, generateResp] = await Promise.all([
         postJSON('/preview', dxfPayload),
@@ -2117,7 +2144,7 @@ async function handlePreviewOnly() {
         bed_height_mm: parseFloat(document.getElementById('sheetH').value),
         street_width_m: parseFloat(document.getElementById('streetWidthM').value),
         street_raise_mm: parseFloat(document.getElementById('streetRaiseMm').value),
-        stl_mode: outputSubMode,
+        stl_mode: outputSubMode.replace('stl_', ''),
       };
       const resp = await postJSON('/preview-stl', payload);
       const zipBlob = await resp.blob();
@@ -2134,7 +2161,7 @@ async function handlePreviewOnly() {
         sheet_height_mm: parseFloat(document.getElementById('sheetH').value),
         material_thickness_mm: parseFloat(document.getElementById('thickness').value),
         assembly_mode: ASSEMBLY_MODE,
-        output_mode: outputSubMode,
+        output_mode: outputSubMode.replace('dxf_', ''),
       };
       const resp = await postJSON('/preview', dxfPayload);
       const previewData = await resp.json();
