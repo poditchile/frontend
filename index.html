@@ -1816,9 +1816,16 @@ function renderLayoutTab(previewData, blobUrl) {
       </button>
     </div>`;
 
+  const LAYER_COLORS = {
+    '02_ENGRAVE': '#2A6FE0',
+    '04_CALLES': '#00A8A8',
+    '05_EDIFICIOS': '#C13FC1',
+    '06_REFERENCIA': '#B8960C',
+  };
+
   const W = previewData.sheet_width_mm, H = previewData.sheet_height_mm;
   for (const sheet of previewData.sheets) {
-    const polys = sheet.parts.map(part => {
+    const shapes = sheet.parts.map(part => {
       const ext = part.exterior.map(p => p.join(',')).join(' L ');
       let d = `M ${ext} Z`;
       for (const hole of part.holes) {
@@ -1827,8 +1834,14 @@ function renderLayoutTab(previewData, blobUrl) {
       }
       const cx = part.exterior.reduce((a, p) => a + p[0], 0) / part.exterior.length;
       const cy = part.exterior.reduce((a, p) => a + p[1], 0) / part.exterior.length;
-      return `<path d="${d}" class="part-shape${part.is_fragment ? ' fragment' : ''}"/>
-              <text x="${cx}" y="${cy}" class="part-label" text-anchor="middle">${part.id}</text>`;
+      const cutPath = `<path d="${d}" fill="#fff" stroke="#D0342C" stroke-width="1.4"/>`;
+      const engraved = (part.engrave_lines || []).map(el => {
+        const pts = el.points.map(p => p.join(',')).join(' ');
+        const color = LAYER_COLORS[el.layer] || '#999';
+        return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="0.8"/>`;
+      }).join('');
+      const label = `<text x="${cx}" y="${cy}" class="part-label" text-anchor="middle" fill="#2A2822">${part.id}</text>`;
+      return cutPath + engraved + label;
     }).join('');
 
     html += `
@@ -1837,7 +1850,7 @@ function renderLayoutTab(previewData, blobUrl) {
         <div class="sheet-svg-wrap">
           <svg viewBox="0 0 ${W} ${H}" style="transform:scaleY(-1)">
             <rect x="0" y="0" width="${W}" height="${H}" fill="#fff" stroke="#DEDACB" stroke-width="2"/>
-            ${polys}
+            ${shapes}
           </svg>
         </div>
       </div>`;
