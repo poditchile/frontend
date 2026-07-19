@@ -1145,9 +1145,10 @@ async function startCheckout() {
       if (profile.subscription_status === 'active') { enterApp(); return; }
     }
   } catch (e) {}
-  // Stripe requires real http(s) redirect URLs -- file:// (opening index.html
-  // directly from disk, like during local testing) isn't valid for it. Once
-  // this is deployed on a real domain, window.location.href works as-is.
+  // Lemon Squeezy requires real http(s) redirect URLs -- file:// (opening
+  // index.html directly from disk, like during local testing) isn't valid
+  // for it. Once this is deployed on a real domain, window.location.href
+  // works as-is.
   const isLocalFile = window.location.protocol === 'file:';
   const redirectUrl = isLocalFile ? 'https://podit.cl/pago-completado' : window.location.href;
   const resp = await fetch(`${API_BASE}/billing/create-checkout-session`, {
