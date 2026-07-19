@@ -813,6 +813,8 @@ const I18N = {
     summary_fragments: "Fragmentos (tiling)", summary_sheets: "Planchas necesarias",
     summary_building_sheets: "Planchas de edificios", summary_building_layers: "Capas de edificios (total)",
     btn_download_sheets: "Descargar planchas.zip", btn_preparing: "Preparando descarga…",
+    btn_regenerate: "Regenerar (gratis)", btn_regenerating: "Regenerando…",
+    hint_regenerate: (n) => `Si faltaron calles/edificios (ej. por un corte de OpenStreetMap), puedes reintentar sin gastar un modelo de tu plan. Te quedan ${n} reintento(s) gratis para este sitio.`,
     summary_model_size: "Tamaño del modelo", summary_fits_bed: "Cabe en la cama", yes: "Sí", no: "No",
     summary_streets_incl: "Calles incluidas", summary_buildings_incl: "Edificios incluidos",
     hint_defaulted: (n) => `${n} edificio(s) de OSM no tenían altura registrada -- se usó la altura por defecto.`,
@@ -913,6 +915,8 @@ const I18N = {
     summary_fragments: "Fragments (tiling)", summary_sheets: "Sheets needed",
     summary_building_sheets: "Building sheets", summary_building_layers: "Building layers (total)",
     btn_download_sheets: "Download sheets.zip", btn_preparing: "Preparing download…",
+    btn_regenerate: "Regenerate (free)", btn_regenerating: "Regenerating…",
+    hint_regenerate: (n) => `If streets/buildings were missing (e.g. an OpenStreetMap hiccup), you can retry without spending one of your plan's models. You have ${n} free retr${n === 1 ? 'y' : 'ies'} left for this site.`,
     summary_model_size: "Model size", summary_fits_bed: "Fits the bed", yes: "Yes", no: "No",
     summary_streets_incl: "Streets included", summary_buildings_incl: "Buildings included",
     hint_defaulted: (n) => `${n} OSM building(s) had no recorded height -- the default height was used.`,
@@ -1445,6 +1449,12 @@ document.getElementById('backToLandingBtn').onclick = backToLanding;
 // its bounding box as the fetch area for elevation data.
 // ---------------------------------------------------------------------
 let currentBBox = null;
+// Free-regenerate state: the exact payload + token from the last /generate
+// call, so a retry can prove to the backend it's the SAME request (see
+// limits.py) and not spend a monthly model.
+let lastDxfPayload = null;
+let lastRetryToken = null;
+let lastRetryAttemptsLeft = 0;
 let currentShape = 'rectangle';
 let drawing = false;
 let points = [];        // polygon vertices / circle center / building-in-progress vertices
@@ -1811,6 +1821,12 @@ function renderLayoutTab(previewData, blobUrl) {
       <button class="download-btn" id="dlBtn" ${blobUrl ? '' : 'disabled'}>
         ${blobUrl ? t('btn_download_sheets') : t('btn_preparing')}
       </button>
+      ${blobUrl && lastRetryToken && lastRetryAttemptsLeft > 0 ? `
+        <button class="download-btn" id="regenBtn" style="margin-top:8px; background:#fff; color:#1b3a5c; border:1px solid #1b3a5c;">
+          ${t('btn_regenerate')}
+        </button>
+        <p class="hint" style="margin:6px 0 0;">${t('hint_regenerate', lastRetryAttemptsLeft)}</p>
+      ` : ''}
     </div>`;
 
   const W = previewData.sheet_width_mm, H = previewData.sheet_height_mm;
@@ -1848,6 +1864,10 @@ function renderLayoutTab(previewData, blobUrl) {
       a.href = blobUrl; a.download = 'terreno_planchas.zip'; a.click();
     };
   }
+  const regenBtn = document.getElementById('regenBtn');
+  if (regenBtn) {
+    regenBtn.onclick = handleRegenerate;
+  }
 }
 
 function resetLayoutTab() {
@@ -1873,6 +1893,9 @@ async function handleGenerate() {
   clearError();
   setButtonLoading(true);
   resetLayoutTab();
+  lastDxfPayload = null;
+  lastRetryToken = null;
+  lastRetryAttemptsLeft = 0;
 
   const scaleDenominator = getScaleDenominator();
   const commonFields = {
@@ -1931,6 +1954,13 @@ async function handleGenerate() {
         Object.assign(previewData.summary, JSON.parse(generateSummaryHeader));
       }
 
+      // Free-retry bookkeeping -- lets "Regenerar (gratis)" re-run this
+      // EXACT same request (e.g. if OSM streets/buildings didn't come
+      // through) without spending a monthly model. See limits.py.
+      lastDxfPayload = dxfPayload;
+      lastRetryToken = generateResp.headers.get('X-Retry-Token');
+      lastRetryAttemptsLeft = parseInt(generateResp.headers.get('X-Retry-Attempts-Left') || '0', 10);
+
       renderLayoutTab(previewData, blobUrl);
       switchTab('layout');
     }
@@ -1943,6 +1973,41 @@ async function handleGenerate() {
     setButtonLoading(false);
     refreshGenerateButton();
     if (currentSession) refreshAccountBadge();
+  }
+}
+
+// Re-runs the exact same /generate + /preview request using the signed
+// retry token -- doesn't spend a monthly model (see limits.py). Capped at
+// limits.MAX_FREE_RETRIES server-side regardless of what the UI shows.
+async function handleRegenerate() {
+  if (!lastDxfPayload || !lastRetryToken) return;
+  clearError();
+  const regenBtn = document.getElementById('regenBtn');
+  if (regenBtn) { regenBtn.disabled = true; regenBtn.textContent = t('btn_regenerating'); }
+
+  const payload = { ...lastDxfPayload, retry_token: lastRetryToken };
+  try {
+    const [previewResp, generateResp] = await Promise.all([
+      postJSON('/preview', lastDxfPayload),
+      postJSON('/generate', payload),
+    ]);
+    const previewData = await previewResp.json();
+    const blob = await generateResp.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    const generateSummaryHeader = generateResp.headers.get('X-Model-Summary');
+    if (generateSummaryHeader) {
+      Object.assign(previewData.summary, JSON.parse(generateSummaryHeader));
+    }
+
+    lastRetryToken = generateResp.headers.get('X-Retry-Token');
+    lastRetryAttemptsLeft = parseInt(generateResp.headers.get('X-Retry-Attempts-Left') || '0', 10);
+
+    renderLayoutTab(previewData, blobUrl);
+  } catch (e) {
+    const msg = (e instanceof TypeError) ? t('err_no_backend', API_BASE) : e.message;
+    showError(msg);
+    if (regenBtn) { regenBtn.disabled = false; regenBtn.textContent = t('btn_regenerate'); }
   }
 }
 
