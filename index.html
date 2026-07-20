@@ -1455,6 +1455,9 @@ let currentBBox = null;
 let lastDxfPayload = null;
 let lastRetryToken = null;
 let lastRetryAttemptsLeft = 0;
+let lastStlPayload = null;
+let lastStlRetryToken = null;
+let lastStlRetryAttemptsLeft = 0;
 let currentShape = 'rectangle';
 let drawing = false;
 let points = [];        // polygon vertices / circle center / building-in-progress vertices
@@ -1896,6 +1899,9 @@ async function handleGenerate() {
   lastDxfPayload = null;
   lastRetryToken = null;
   lastRetryAttemptsLeft = 0;
+  lastStlPayload = null;
+  lastStlRetryToken = null;
+  lastStlRetryAttemptsLeft = 0;
 
   const scaleDenominator = getScaleDenominator();
   const commonFields = {
@@ -1927,6 +1933,11 @@ async function handleGenerate() {
       const zip = await JSZip.loadAsync(zipBlob);
       const fileName = zip.file('terreno_completo.stl') ? 'terreno_completo.stl' : 'terreno_solo.stl';
       const blob = await zip.file(fileName).async('blob');
+
+      lastStlPayload = stlPayload;
+      lastStlRetryToken = stlResp.headers.get('X-Retry-Token');
+      lastStlRetryAttemptsLeft = parseInt(stlResp.headers.get('X-Retry-Attempts-Left') || '0', 10);
+
       renderStlResult(summary, blob, fileName);
       switchTab('layout');
     } else {
@@ -2094,11 +2105,45 @@ function renderStlResult(summary, blob, fileName) {
       ${defaultedNote}
       ${warn ? `<div class="error-box" style="margin-top:10px;">${warn}</div>` : ''}
       <button class="download-btn" id="dlStlBtn">${t('btn_download_sheets')}</button>
+      ${lastStlRetryToken && lastStlRetryAttemptsLeft > 0 ? `
+        <button class="download-btn" id="regenStlBtn" style="margin-top:8px; background:#fff; color:#1b3a5c; border:1px solid #1b3a5c;">
+          ${t('btn_regenerate')}
+        </button>
+        <p class="hint" style="margin:6px 0 0;">${t('hint_regenerate', lastStlRetryAttemptsLeft)}</p>
+      ` : ''}
     </div>`;
   document.getElementById('dlStlBtn').onclick = () => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
   };
+  const regenStlBtn = document.getElementById('regenStlBtn');
+  if (regenStlBtn) regenStlBtn.onclick = handleRegenerateStl;
+}
+
+// Same free-retry idea as handleRegenerate, for the STL flow.
+async function handleRegenerateStl() {
+  if (!lastStlPayload || !lastStlRetryToken) return;
+  clearError();
+  const btn = document.getElementById('regenStlBtn');
+  if (btn) { btn.disabled = true; btn.textContent = t('btn_regenerating'); }
+  try {
+    const stlResp = await postJSON('/generate-stl', { ...lastStlPayload, retry_token: lastStlRetryToken });
+    const summaryHeader = stlResp.headers.get('X-Model-Summary');
+    const summary = summaryHeader ? JSON.parse(summaryHeader) : {};
+    const zipBlob = await stlResp.blob();
+    const zip = await JSZip.loadAsync(zipBlob);
+    const fileName = zip.file('terreno_completo.stl') ? 'terreno_completo.stl' : 'terreno_solo.stl';
+    const blob = await zip.file(fileName).async('blob');
+
+    lastStlRetryToken = stlResp.headers.get('X-Retry-Token');
+    lastStlRetryAttemptsLeft = parseInt(stlResp.headers.get('X-Retry-Attempts-Left') || '0', 10);
+
+    renderStlResult(summary, blob, fileName);
+  } catch (e) {
+    const msg = (e instanceof TypeError) ? t('err_no_backend', API_BASE) : e.message;
+    showError(msg);
+    if (btn) { btn.disabled = false; btn.textContent = t('btn_regenerate'); }
+  }
 }
 
 document.getElementById('generateBtn').onclick = handleGenerate;
