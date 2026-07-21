@@ -101,8 +101,8 @@
   .adjust-handle{background:#fff;border:2px solid var(--accent);border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,0.25);cursor:pointer;}
   .adjust-handle-corner{border-radius:2px;cursor:nwse-resize;}
   .adjust-handle-edge{border-radius:50%;cursor:move;}
-  .adjust-size-label{position:absolute;top:64px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:6px 14px;border-radius:20px;font-family:'IBM Plex Mono',monospace;font-size:0.78rem;font-weight:600;z-index:999;pointer-events:none;display:none;}
   .adjust-confirm-btn{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;border:none;padding:11px 22px;border-radius:24px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.85rem;cursor:pointer;z-index:999;box-shadow:0 2px 10px rgba(0,0,0,0.2);display:none;}
+  .measure-label{background:#fff;border:1.5px solid #e33;color:#111;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.2);pointer-events:none;}
 
   /* ---------- Distribución tab ---------- */
   .layout-summary{padding:16px 22px;border-bottom:1px solid var(--line);}
@@ -491,7 +491,6 @@
       <button type="button" class="draw-tool-btn" data-shape="polygon" data-i18n-title="tool_polygon" title="Polígono">⬠</button>
     </div>
     <div class="draw-hint" id="drawHint" data-i18n="hint_rect">Dibuja un rectángulo sobre el sitio que quieres modelar</div>
-    <div class="adjust-size-label" id="adjustSizeLabel"></div>
     <button type="button" class="adjust-confirm-btn" id="adjustConfirmBtn" data-i18n="btn_confirm_selection">✓ CONFIRMAR SELECCIÓN</button>
   </div>
 
@@ -1341,8 +1340,12 @@ function applyProjectParams(params) {
       document.getElementById('rEast').textContent = currentBBox.east.toFixed(4);
       const bounds = L.latLngBounds([currentBBox.south, currentBBox.west], [currentBBox.north, currentBBox.east]);
       if (finalLayer) map.removeLayer(finalLayer);
+      clearAllMeasureLabels();
       finalLayer = L.rectangle(bounds, { color: '#1B3A5C', weight: 2, fillOpacity: 0.08 }).addTo(map);
-      if ((params.selectionShape || { type: 'rectangle' }).type === 'rectangle') wireRectangleAdjust(finalLayer);
+      if ((params.selectionShape || { type: 'rectangle' }).type === 'rectangle') {
+        wireRectangleAdjust(finalLayer);
+        updateRectMeasureLabels(bounds);
+      }
       map.fitBounds(bounds);
       map.invalidateSize();
       const shape = params.selectionShape || { type: 'rectangle' };
@@ -1582,6 +1585,7 @@ function setShape(shape) {
     // Picking a site-selection tool starts a fresh site pick; the building
     // tool is additive and must NOT clear the already-chosen site.
     if (finalLayer) { map.removeLayer(finalLayer); finalLayer = null; }
+    clearAllMeasureLabels();
     currentBBox = null;
     currentSelectionShape = null;
     document.getElementById('areaWarning').style.display = 'none';
@@ -1624,13 +1628,48 @@ function metersSize(bounds) {
   return { w, h };
 }
 
-function formatWH(bounds) {
-  const { w, h } = metersSize(bounds);
-  return `${w.toFixed(0)} x ${h.toFixed(0)} m`;
+function fmtMeters(m) {
+  return `${m.toFixed(0)} m`;
 }
 
-function updateAdjustSizeLabel() {
-  document.getElementById('adjustSizeLabel').textContent = formatWH(adjustBounds);
+// ---------------------------------------------------------------------
+// Measurement labels that ride along with the shape on the map (real
+// markers, not a fixed screen position) -- width/height next to a
+// rectangle's edges, diameter next to a circle, and per-segment length
+// next to each side of a freehand polygon while it's being drawn.
+// ---------------------------------------------------------------------
+let activeMeasureLabels = {};
+
+function setMeasureLabel(key, latlng, text) {
+  if (activeMeasureLabels[key]) {
+    activeMeasureLabels[key].setLatLng(latlng);
+    activeMeasureLabels[key].setIcon(L.divIcon({ className: 'measure-label', html: text, iconSize: null }));
+  } else {
+    activeMeasureLabels[key] = L.marker(latlng, {
+      icon: L.divIcon({ className: 'measure-label', html: text, iconSize: null }),
+      interactive: false, zIndexOffset: 900,
+    }).addTo(map);
+  }
+}
+
+function clearMeasureLabel(key) {
+  if (activeMeasureLabels[key]) { map.removeLayer(activeMeasureLabels[key]); delete activeMeasureLabels[key]; }
+}
+
+function clearAllMeasureLabels() {
+  Object.keys(activeMeasureLabels).forEach(clearMeasureLabel);
+}
+
+function updateRectMeasureLabels(bounds) {
+  const { w, h } = metersSize(bounds);
+  const n = bounds.getNorth(), s = bounds.getSouth(), e = bounds.getEast(), west = bounds.getWest();
+  setMeasureLabel('w', L.latLng(n, (e + west) / 2), fmtMeters(w));
+  setMeasureLabel('h', L.latLng((n + s) / 2, west), fmtMeters(h));
+}
+
+function updateCircleMeasureLabel(center, radius, circleLayer) {
+  const eastEdge = circleLayer.getBounds().getEast();
+  setMeasureLabel('d', L.latLng(center.lat, eastEdge), fmtMeters(radius * 2));
 }
 
 function adjustHandlePositions(bounds) {
@@ -1669,7 +1708,7 @@ function onAdjustHandleDrag(key, latlng) {
 
   const positions = adjustHandlePositions(adjustBounds);
   adjustHandles.forEach(m => { if (m._handleKey !== key) m.setLatLng(positions[m._handleKey]); });
-  updateAdjustSizeLabel();
+  updateRectMeasureLabels(adjustBounds);
 }
 
 function enterAdjustMode() {
@@ -1698,9 +1737,8 @@ function enterAdjustMode() {
     adjustHandles.push(marker);
   });
 
-  document.getElementById('adjustSizeLabel').style.display = 'block';
-  updateAdjustSizeLabel();
   document.getElementById('adjustConfirmBtn').style.display = 'block';
+  updateRectMeasureLabels(adjustBounds);
 }
 
 function exitAdjustMode(confirm) {
@@ -1715,13 +1753,13 @@ function exitAdjustMode(confirm) {
   if (confirm) {
     const { w, h } = metersSize(adjustBounds);
     setSelection(adjustBounds, 'rectangle', { type: 'rectangle' }, w * h);
-    // Keep the measurement on screen (read-only) after confirming, as requested.
-    document.getElementById('adjustSizeLabel').textContent = formatWH(adjustBounds);
-    document.getElementById('adjustSizeLabel').style.display = 'block';
+    // Keep the measurement labels on screen (read-only) after confirming, as requested.
+    updateRectMeasureLabels(adjustBounds);
   } else {
-    finalLayer.setBounds(L.latLngBounds(
-      L.latLng(currentBBox.south, currentBBox.west), L.latLng(currentBBox.north, currentBBox.east)));
-    document.getElementById('adjustSizeLabel').style.display = 'none';
+    const restored = L.latLngBounds(
+      L.latLng(currentBBox.south, currentBBox.west), L.latLng(currentBBox.north, currentBBox.east));
+    finalLayer.setBounds(restored);
+    updateRectMeasureLabels(restored);
   }
 }
 
@@ -1758,6 +1796,7 @@ function initMap() {
                       * metersBetween(bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getWest());
       finishDrawing(bounds, L.rectangle(bounds, { color: '#1B3A5C', weight: 2, fillOpacity: 0.08 }),
                     'rectangle', { type: 'rectangle' }, rectArea);
+      updateRectMeasureLabels(bounds);
       return;
     }
 
@@ -1768,9 +1807,22 @@ function initMap() {
       if (points.length >= 3 && distPx(map, points[0], e.latlng) < 12) {
         const polygon = L.polygon(points, { color: '#1B3A5C', weight: 2, fillOpacity: 0.08 });
         const polyArea = polygonAreaM2(points);
+        // Label the CLOSING segment too (last point back to the first),
+        // and drop the live rubber-band label -- the shape is done.
+        const first = points[0], last = points[points.length - 1];
+        setMeasureLabel(`seg${points.length - 1}`,
+          L.latLng((first.lat + last.lat) / 2, (first.lng + last.lng) / 2),
+          fmtMeters(metersBetween(last.lat, last.lng, first.lat, first.lng)));
+        clearMeasureLabel('live');
         finishDrawing(polygon.getBounds(), polygon, 'polygon',
                       { type: 'polygon', points: points.map(p => [p.lat, p.lng]) }, polyArea);
         return;
+      }
+      if (points.length >= 1) {
+        const prev = points[points.length - 1];
+        setMeasureLabel(`seg${points.length - 1}`,
+          L.latLng((prev.lat + e.latlng.lat) / 2, (prev.lng + e.latlng.lng) / 2),
+          fmtMeters(metersBetween(prev.lat, prev.lng, e.latlng.lat, e.latlng.lng)));
       }
       points.push(e.latlng);
       document.getElementById('drawHint').textContent = points.length < 3
@@ -1805,6 +1857,7 @@ function initMap() {
     finishDrawing(fetchBounds, circle, 'circle',
                   { type: 'circle', center_lat: circleCenter.lat, center_lon: circleCenter.lng, radius_m: radius },
                   circleArea);
+    updateCircleMeasureLabel(circleCenter, radius, circle);
     circleCenter = null;
   });
 
@@ -1819,6 +1872,7 @@ function initMap() {
       if (previewLayer) map.removeLayer(previewLayer);
       previewLayer = L.circle(circleCenter, { radius, color: '#1B3A5C', weight: 2, dashArray: '4 4', fillOpacity: 0.05 }).addTo(map);
       showLiveArea(Math.PI * radius * radius);
+      updateCircleMeasureLabel(circleCenter, radius, previewLayer);
       return;
     }
     if (!drawing || points.length === 0) return;
@@ -1830,10 +1884,15 @@ function initMap() {
       const w = metersBetween(bounds.getSouth(), bounds.getWest(), bounds.getSouth(), bounds.getEast());
       const h = metersBetween(bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getWest());
       showLiveArea(w * h);
+      updateRectMeasureLabels(bounds);
     } else if (currentShape === 'polygon' && points.length >= 1) {
       if (previewLayer) map.removeLayer(previewLayer);
       previewLayer = L.polyline([...points, e.latlng], { color: '#1B3A5C', weight: 2, dashArray: '4 4' }).addTo(map);
       if (points.length >= 2) showLiveArea(polygonAreaM2([...points, e.latlng]));
+      const prev = points[points.length - 1];
+      setMeasureLabel('live',
+        L.latLng((prev.lat + e.latlng.lat) / 2, (prev.lng + e.latlng.lng) / 2),
+        fmtMeters(metersBetween(prev.lat, prev.lng, e.latlng.lat, e.latlng.lng)));
     }
   });
 
@@ -1843,6 +1902,7 @@ function initMap() {
   document.getElementById('redrawBtn').onclick = startDrawing;
   document.getElementById('clearSelectionBtn').onclick = () => {
     if (finalLayer) { map.removeLayer(finalLayer); finalLayer = null; }
+    clearAllMeasureLabels();
     currentBBox = null;
     currentSelectionShape = null;
     currentAreaM2 = 0;
