@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PODIT Laser and 3D Maps — Maquetas de terreno para corte láser e impresión 3D</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -701,7 +701,7 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -1338,16 +1338,16 @@ function applyProjectParams(params) {
       document.getElementById('rNorth').textContent = currentBBox.north.toFixed(4);
       document.getElementById('rWest').textContent = currentBBox.west.toFixed(4);
       document.getElementById('rEast').textContent = currentBBox.east.toFixed(4);
-      const bounds = L.latLngBounds([currentBBox.south, currentBBox.west], [currentBBox.north, currentBBox.east]);
-      if (finalLayer) map.removeLayer(finalLayer);
+      const bounds = L.latLngBounds(L.latLng(currentBBox.south, currentBBox.west), L.latLng(currentBBox.north, currentBBox.east));
+      if (finalLayer) removeMapLayer(finalLayer);
       clearAllMeasureLabels();
       finalLayer = L.rectangle(bounds, { color: '#1B3A5C', weight: 2, fillOpacity: 0.08 }).addTo(map);
       if ((params.selectionShape || { type: 'rectangle' }).type === 'rectangle') {
         wireRectangleAdjust(finalLayer);
         updateRectMeasureLabels(bounds);
       }
-      map.fitBounds(bounds);
-      map.invalidateSize();
+      map.fitBounds(toGLBounds(bounds));
+      map.resize();
       const shape = params.selectionShape || { type: 'rectangle' };
       const area = params.areaM2 || (
         metersBetween(currentBBox.south, currentBBox.west, currentBBox.south, currentBBox.east) *
@@ -1380,7 +1380,7 @@ function enterApp() {
     initPlaceSearch();
     mapInitialized = true;
   } else {
-    setTimeout(() => map.invalidateSize(), 0);
+    setTimeout(() => map.resize(), 0);
   }
 }
 function backToLanding() {
@@ -1420,9 +1420,9 @@ function initPlaceSearch() {
           const lat = parseFloat(r.lat), lon = parseFloat(r.lon);
           if (r.boundingbox) {
             const [south, north, west, east] = r.boundingbox.map(parseFloat);
-            map.fitBounds([[south, west], [north, east]]);
+            map.fitBounds([[west, south], [east, north]]);
           } else {
-            map.setView([lat, lon], 15);
+            map.flyTo({ center: [lon, lat], zoom: 15 });
           }
           resultsBox.style.display = 'none';
           input.value = r.display_name;
@@ -1491,6 +1491,157 @@ function metersBetween(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
+// ---------------------------------------------------------------------
+// Minimal Leaflet-API-compatible shim over Mapbox GL JS. The drawing /
+// adjust-mode / measure-label code below was originally written against
+// Leaflet's API (L.marker, L.rectangle, L.circle, L.polygon, bounds
+// getters, etc.) -- this shim keeps that code working almost unchanged
+// after switching the actual map engine to Mapbox GL JS, which is needed
+// for genuine 3D (pitch + ctrl-drag rotate) -- Leaflet has no rotation
+// support at all, so a real style/3D map can't be embedded in it.
+// ---------------------------------------------------------------------
+let _shapeSeq = 0;
+
+function llDestination(lat, lng, distanceM, bearingDeg) {
+  const R = 6371000;
+  const brng = bearingDeg * Math.PI / 180;
+  const lat1 = lat * Math.PI / 180, lng1 = lng * Math.PI / 180;
+  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(distanceM / R) + Math.cos(lat1) * Math.sin(distanceM / R) * Math.cos(brng));
+  const lng2 = lng1 + Math.atan2(Math.sin(brng) * Math.sin(distanceM / R) * Math.cos(lat1),
+                                  Math.cos(distanceM / R) - Math.sin(lat1) * Math.sin(lat2));
+  return { lat: lat2 * 180 / Math.PI, lng: lng2 * 180 / Math.PI };
+}
+
+function boundsAroundCenter(center, radiusM) {
+  return L.latLngBounds(
+    L.latLng(llDestination(center.lat, center.lng, radiusM, 180).lat, llDestination(center.lat, center.lng, radiusM, 270).lng),
+    L.latLng(llDestination(center.lat, center.lng, radiusM, 0).lat, llDestination(center.lat, center.lng, radiusM, 90).lng)
+  );
+}
+
+function removeMapLayer(obj) {
+  if (obj && typeof obj.remove === 'function') obj.remove();
+}
+
+function toGLBounds(bounds) {
+  return [[bounds.getWest(), bounds.getSouth()], [bounds.getEast(), bounds.getNorth()]];
+}
+
+function rectRingGeometry(bounds) {
+  const n = bounds.getNorth(), s = bounds.getSouth(), e = bounds.getEast(), w = bounds.getWest();
+  return { type: 'Polygon', coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]] };
+}
+
+class GLShapeLayer {
+  constructor(geometry, style, geomType) {
+    this._id = 'shp' + (_shapeSeq++);
+    this._geomType = geomType; // 'Polygon' or 'LineString'
+    this._style = style || {};
+    this._geometry = geometry;
+    this._map = null;
+    this._listeners = {};
+  }
+  addTo(map) {
+    this._map = map;
+    const doAdd = () => {
+      if (!this._map) return; // removed before the style finished loading
+      map.addSource(this._id, { type: 'geojson', data: { type: 'Feature', geometry: this._geometry, properties: {} } });
+      if (this._geomType === 'Polygon') {
+        map.addLayer({ id: this._id + '-fill', type: 'fill', source: this._id,
+          paint: { 'fill-color': this._style.color || '#1B3A5C', 'fill-opacity': this._style.fillOpacity ?? 0.08 } });
+      }
+      const linePaint = { 'line-color': this._style.color || '#1B3A5C', 'line-width': this._style.weight ?? 2 };
+      if (this._style.dashArray) linePaint['line-dasharray'] = [2, 2];
+      map.addLayer({ id: this._id + '-line', type: 'line', source: this._id,
+        layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: linePaint });
+      if (this._geomType === 'Polygon') {
+        this._dblclickHandler = (e) => { (this._listeners.dblclick || []).forEach(fn => fn(e)); };
+        map.on('dblclick', this._id + '-fill', this._dblclickHandler);
+      }
+    };
+    if (map.isStyleLoaded()) doAdd(); else map.once('load', doAdd);
+    return this;
+  }
+  remove() {
+    if (!this._map) { this._map = null; return; }
+    const map = this._map;
+    this._map = null;
+    if (this._dblclickHandler) map.off('dblclick', this._id + '-fill', this._dblclickHandler);
+    if (map.getLayer && map.getLayer(this._id + '-fill')) map.removeLayer(this._id + '-fill');
+    if (map.getLayer && map.getLayer(this._id + '-line')) map.removeLayer(this._id + '-line');
+    if (map.getSource && map.getSource(this._id)) map.removeSource(this._id);
+  }
+  _setGeometry(geometry) {
+    this._geometry = geometry;
+    if (this._map && this._map.getSource(this._id)) {
+      this._map.getSource(this._id).setData({ type: 'Feature', geometry, properties: {} });
+    }
+  }
+  setBounds(bounds) { this._setGeometry(rectRingGeometry(bounds)); }
+  setStyle(style) {
+    if (!this._map) return;
+    if ('dashArray' in style) {
+      this._map.setPaintProperty(this._id + '-line', 'line-dasharray', style.dashArray ? [2, 2] : null);
+    }
+  }
+  getBounds() {
+    const ring = this._geomType === 'Polygon' ? this._geometry.coordinates[0] : this._geometry.coordinates;
+    let south = 90, north = -90, west = 180, east = -180;
+    ring.forEach(([lng, lat]) => {
+      south = Math.min(south, lat); north = Math.max(north, lat);
+      west = Math.min(west, lng); east = Math.max(east, lng);
+    });
+    return L.latLngBounds(L.latLng(south, west), L.latLng(north, east));
+  }
+  on(evt, cb) { (this._listeners[evt] = this._listeners[evt] || []).push(cb); return this; }
+}
+
+const L = {
+  latLng(lat, lng) { return { lat, lng }; },
+  latLngBounds(a, b) {
+    const south = Math.min(a.lat, b.lat), north = Math.max(a.lat, b.lat);
+    const west = Math.min(a.lng, b.lng), east = Math.max(a.lng, b.lng);
+    return { getSouth: () => south, getNorth: () => north, getWest: () => west, getEast: () => east };
+  },
+  divIcon(opts) { return opts; },
+  marker(latlng, opts = {}) {
+    const el = document.createElement('div');
+    if (opts.icon) {
+      el.className = opts.icon.className || '';
+      if (opts.icon.html) el.innerHTML = opts.icon.html;
+      if (opts.icon.iconSize) { el.style.width = opts.icon.iconSize[0] + 'px'; el.style.height = opts.icon.iconSize[1] + 'px'; }
+    }
+    const marker = new mapboxgl.Marker({ element: el, draggable: !!opts.draggable })
+      .setLngLat([latlng.lng, latlng.lat]);
+    marker.getLatLng = () => { const p = marker.getLngLat(); return { lat: p.lat, lng: p.lng }; };
+    marker.setLatLng = (ll) => { marker.setLngLat([ll.lng, ll.lat]); return marker; };
+    marker.setIcon = (icon) => {
+      el.className = icon.className || '';
+      el.innerHTML = icon.html || '';
+      if (icon.iconSize) { el.style.width = icon.iconSize[0] + 'px'; el.style.height = icon.iconSize[1] + 'px'; }
+    };
+    return marker;
+  },
+  rectangle(bounds, style) { return new GLShapeLayer(rectRingGeometry(bounds), style, 'Polygon'); },
+  circle(center, opts) {
+    const steps = 64, ring = [];
+    for (let i = 0; i <= steps; i++) {
+      const p = llDestination(center.lat, center.lng, opts.radius, (360 / steps) * i);
+      ring.push([p.lng, p.lat]);
+    }
+    return new GLShapeLayer({ type: 'Polygon', coordinates: [ring] }, opts, 'Polygon');
+  },
+  polygon(points, style) {
+    const ring = points.map(p => [p.lng, p.lat]);
+    ring.push(ring[0]);
+    return new GLShapeLayer({ type: 'Polygon', coordinates: [ring] }, style, 'Polygon');
+  },
+  polyline(points, style) {
+    return new GLShapeLayer({ type: 'LineString', coordinates: points.map(p => [p.lng, p.lat]) }, style, 'LineString');
+  },
+  DomEvent: { stopPropagation(e) { if (e && e.originalEvent) e.originalEvent.stopPropagation(); } },
+};
+
 let currentSelectionShape = null;   // sent to the backend for accurate area validation
 let currentAreaM2 = 0;
 let currentPlanLimits = { maxAreaM2: 160000, isPro: false };  // updated from /me once logged in
@@ -1555,8 +1706,8 @@ function setBBoxFromBounds(bounds) {
 }
 
 function clearDrawingLayers() {
-  if (previewLayer) { map.removeLayer(previewLayer); previewLayer = null; }
-  if (finalLayer) { map.removeLayer(finalLayer); finalLayer = null; }
+  if (previewLayer) { removeMapLayer(previewLayer); previewLayer = null; }
+  if (finalLayer) { removeMapLayer(finalLayer); finalLayer = null; }
 }
 
 const hintByShape = {
@@ -1575,7 +1726,7 @@ function setShape(shape) {
   currentShape = shape;
   document.querySelectorAll('.draw-tool-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === shape));
   points = [];
-  if (previewLayer) { map.removeLayer(previewLayer); previewLayer = null; }
+  if (previewLayer) { removeMapLayer(previewLayer); previewLayer = null; }
   drawing = true;
   document.getElementById('drawHint').style.display = 'block';
   document.getElementById('drawHint').textContent = hintByShape[shape];
@@ -1584,7 +1735,7 @@ function setShape(shape) {
   if (shape !== 'building') {
     // Picking a site-selection tool starts a fresh site pick; the building
     // tool is additive and must NOT clear the already-chosen site.
-    if (finalLayer) { map.removeLayer(finalLayer); finalLayer = null; }
+    if (finalLayer) { removeMapLayer(finalLayer); finalLayer = null; }
     clearAllMeasureLabels();
     currentBBox = null;
     currentSelectionShape = null;
@@ -1605,8 +1756,8 @@ function finishDrawing(bounds, shapeLayer, shapeType, shapeData, areaM2) {
 }
 
 function distPx(map, a, b) {
-  const pa = map.latLngToContainerPoint(a), pb = map.latLngToContainerPoint(b);
-  return pa.distanceTo(pb);
+  const pa = map.project([a.lng, a.lat]), pb = map.project([b.lng, b.lat]);
+  return Math.hypot(pa.x - pb.x, pa.y - pb.y);
 }
 
 // ---------------------------------------------------------------------
@@ -1653,7 +1804,7 @@ function setMeasureLabel(key, latlng, text) {
 }
 
 function clearMeasureLabel(key) {
-  if (activeMeasureLabels[key]) { map.removeLayer(activeMeasureLabels[key]); delete activeMeasureLabels[key]; }
+  if (activeMeasureLabels[key]) { removeMapLayer(activeMeasureLabels[key]); delete activeMeasureLabels[key]; }
 }
 
 function clearAllMeasureLabels() {
@@ -1743,7 +1894,7 @@ function enterAdjustMode() {
 
 function exitAdjustMode(confirm) {
   if (!adjustMode) return;
-  adjustHandles.forEach(m => map.removeLayer(m));
+  adjustHandles.forEach(m => removeMapLayer(m));
   adjustHandles = [];
   finalLayer.setStyle({ dashArray: null });
   document.getElementById('adjustConfirmBtn').style.display = 'none';
@@ -1788,33 +1939,54 @@ document.getElementById('adjustConfirmBtn').addEventListener('click', () => exit
 const MAPBOX_STYLE_ID = 'alvarop123/cmru60tce00au01s1204sa121';
 const MAPBOX_STYLE_TOKEN = 'pk.eyJ1IjoiYWx2YXJvcDEyMyIsImEiOiJjbXJ1NmgycTQwNzFtMndxMWJzazhtYzcxIn0.CRGZexjsHYYmg-Z51t4LUg';
 
-function addBaseMapLayer(map) {
-  const configured = !MAPBOX_STYLE_ID.includes('USERNAME') && !MAPBOX_STYLE_TOKEN.includes('YOUR_PUBLIC_TOKEN');
-  if (configured) {
-    L.tileLayer(
-      `https://api.mapbox.com/styles/v1/${MAPBOX_STYLE_ID}/tiles/{z}/{x}/{y}@2x?access_token=${MAPBOX_STYLE_TOKEN}`,
-      {
-        attribution: '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> '
-          + '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        tileSize: 512, zoomOffset: -1, maxZoom: 22,
-      }
-    ).addTo(map);
-  } else {
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
-    }).addTo(map);
-  }
+// Flat-tile fallback style (plain OpenStreetMap raster) used only if the
+// Mapbox style/token above haven't been configured -- keeps the map usable
+// either way, just without the 3D style.
+const OSM_FALLBACK_STYLE = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '&copy; OpenStreetMap contributors',
+    },
+  },
+  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+};
+
+// Wraps a Mapbox GL JS mouse event so existing handlers (written for
+// Leaflet's e.latlng) keep working unchanged -- mapboxgl's e.lngLat is
+// already a {lat, lng, distanceTo(), ...} object, just under a different
+// property name.
+function withLatLng(handler) {
+  return (e) => { e.latlng = e.lngLat; handler(e); };
 }
 
 function initMap() {
-  map = L.map('map', { zoomControl: true, doubleClickZoom: false }).setView([-33.4463, -70.6634], 15);
-  map.invalidateSize();
-  addBaseMapLayer(map);
-  setTimeout(() => map.invalidateSize(), 0);
-  window.addEventListener('resize', () => map.invalidateSize());
+  const configured = !MAPBOX_STYLE_ID.includes('USERNAME') && !MAPBOX_STYLE_TOKEN.includes('YOUR_PUBLIC_TOKEN');
+  mapboxgl.accessToken = configured ? MAPBOX_STYLE_TOKEN : '';
+
+  map = new mapboxgl.Map({
+    container: 'map',
+    style: configured ? ('mapbox://styles/' + MAPBOX_STYLE_ID) : OSM_FALLBACK_STYLE,
+    center: [-70.6634, -33.4463],
+    zoom: 15,
+    doubleClickZoom: false,
+  });
+  map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
+  // Real 3D: drag with the right mouse button (or ctrl+left-click-drag) to
+  // rotate/tilt -- this is mapboxgl's own default DragRotateHandler
+  // behavior, nothing extra to wire up for it.
+
+  map.resize();
+  setTimeout(() => map.resize(), 0);
+  window.addEventListener('resize', () => map.resize());
   setShape('rectangle'); // the toolbar shows rectangle as active by default -- actually arm it too
 
-  map.on('click', (e) => {
+  map.on('click', withLatLng((e) => {
     if (!drawing) return;
 
     if (currentShape === 'rectangle') {
@@ -1860,16 +2032,16 @@ function initMap() {
       document.getElementById('drawHint').textContent = points.length < 3
         ? t('hint_polygon_more')
         : t('hint_polygon_close');
-      if (previewLayer) map.removeLayer(previewLayer);
+      if (previewLayer) removeMapLayer(previewLayer);
       previewLayer = L.polygon(points, { color: '#1B3A5C', weight: 2, dashArray: '4 4', fillOpacity: 0.05 }).addTo(map);
       return;
     }
-  });
+  }));
 
   // --- Circle: two clicks (center, then edge) ---------
   let circleCenter = null;
 
-  map.on('mousedown', (e) => {
+  map.on('mousedown', withLatLng((e) => {
     if (!drawing || currentShape !== 'circle') return;
     if (!circleCenter) {
       circleCenter = e.latlng;
@@ -1880,28 +2052,27 @@ function initMap() {
     if (radius < 1) return;
     const circle = L.circle(circleCenter, { radius, color: '#1B3A5C', weight: 2, fillOpacity: 0.08 });
     const circleArea = Math.PI * radius * radius;
-    // Leaflet's toBounds() uses a spherical-earth approximation; the
-    // backend clips the TRUE circle using an accurate UTM projection.
-    // Pad the requested data area generously so that small mismatch never
-    // leaves the backend without data right at the circle's own edge --
-    // extra fetched area is harmless (clipped away precisely afterward).
-    const fetchBounds = circleCenter.toBounds(radius * 2 * 1.15);
+    // Pad the requested data area generously so a small mismatch in the
+    // circle math never leaves the backend without data right at the
+    // circle's own edge -- extra fetched area is harmless (clipped away
+    // precisely afterward, server-side, with an accurate UTM projection).
+    const fetchBounds = boundsAroundCenter(circleCenter, radius * 2 * 1.15);
     finishDrawing(fetchBounds, circle, 'circle',
                   { type: 'circle', center_lat: circleCenter.lat, center_lon: circleCenter.lng, radius_m: radius },
                   circleArea);
     updateCircleMeasureLabel(circleCenter, radius, circle);
     circleCenter = null;
-  });
+  }));
 
   function showLiveArea(areaM2) {
     document.getElementById('rSize').textContent = `${areaM2.toLocaleString(currentLang === 'es' ? 'es-CL' : 'en-US', {maximumFractionDigits: 0})} m²`;
     updateAreaBar(areaM2);
   }
 
-  map.on('mousemove', (e) => {
+  map.on('mousemove', withLatLng((e) => {
     if (drawing && currentShape === 'circle' && circleCenter) {
       const radius = circleCenter.distanceTo(e.latlng);
-      if (previewLayer) map.removeLayer(previewLayer);
+      if (previewLayer) removeMapLayer(previewLayer);
       previewLayer = L.circle(circleCenter, { radius, color: '#1B3A5C', weight: 2, dashArray: '4 4', fillOpacity: 0.05 }).addTo(map);
       showLiveArea(Math.PI * radius * radius);
       updateCircleMeasureLabel(circleCenter, radius, previewLayer);
@@ -1911,14 +2082,14 @@ function initMap() {
 
     if (currentShape === 'rectangle') {
       const bounds = L.latLngBounds(points[0], e.latlng);
-      if (previewLayer) map.removeLayer(previewLayer);
+      if (previewLayer) removeMapLayer(previewLayer);
       previewLayer = L.rectangle(bounds, { color: '#1B3A5C', weight: 2, dashArray: '4 4', fillOpacity: 0.05 }).addTo(map);
       const w = metersBetween(bounds.getSouth(), bounds.getWest(), bounds.getSouth(), bounds.getEast());
       const h = metersBetween(bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getWest());
       showLiveArea(w * h);
       updateRectMeasureLabels(bounds);
     } else if (currentShape === 'polygon' && points.length >= 1) {
-      if (previewLayer) map.removeLayer(previewLayer);
+      if (previewLayer) removeMapLayer(previewLayer);
       previewLayer = L.polyline([...points, e.latlng], { color: '#1B3A5C', weight: 2, dashArray: '4 4' }).addTo(map);
       if (points.length >= 2) showLiveArea(polygonAreaM2([...points, e.latlng]));
       const prev = points[points.length - 1];
@@ -1926,14 +2097,14 @@ function initMap() {
         L.latLng((prev.lat + e.latlng.lat) / 2, (prev.lng + e.latlng.lng) / 2),
         fmtMeters(metersBetween(prev.lat, prev.lng, e.latlng.lat, e.latlng.lng)));
     }
-  });
+  }));
 
   document.querySelectorAll('.draw-tool-btn').forEach(btn => {
     btn.onclick = () => setShape(btn.dataset.shape);
   });
   document.getElementById('redrawBtn').onclick = startDrawing;
   document.getElementById('clearSelectionBtn').onclick = () => {
-    if (finalLayer) { map.removeLayer(finalLayer); finalLayer = null; }
+    if (finalLayer) { removeMapLayer(finalLayer); finalLayer = null; }
     clearAllMeasureLabels();
     currentBBox = null;
     currentSelectionShape = null;
