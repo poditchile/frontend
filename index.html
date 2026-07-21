@@ -1772,12 +1772,44 @@ function wireRectangleAdjust(layer) {
 
 document.getElementById('adjustConfirmBtn').addEventListener('click', () => exitAdjustMode(true));
 
+// --- Base map style -------------------------------------------------------
+// To use one of Mapbox's own map styles (e.g. a style you customized or
+// picked from Mapbox Studio's style gallery, like "Outdoors Winter")
+// instead of the plain OpenStreetMap tiles:
+//   1. In Mapbox Studio, open the style you want and click "Share" ->
+//      copy the "Style URL" (looks like mapbox://styles/USERNAME/STYLE_ID).
+//      If you picked a style from the gallery, click "Add to your studio"
+//      FIRST so it becomes a style under your own account.
+//   2. Get a PUBLIC token (starts with "pk.") from
+//      account.mapbox.com/access-tokens -- this is meant to be visible in
+//      client-side code, unlike the secret token the backend uses.
+//   3. Paste both below, replacing the two placeholder strings.
+// Leave MAPBOX_STYLE_ID as-is to keep using plain OpenStreetMap tiles.
+const MAPBOX_STYLE_ID = 'alvarop123/cmru60tce00au01s1204sa121';
+const MAPBOX_STYLE_TOKEN = 'pk.eyJ1IjoiYWx2YXJvcDEyMyIsImEiOiJjbXJoNzE2aGQwNWhuNDlwdnJwbXZrZDlrIn0.6-QKIwAjOgYU9k8Pis91VQ';
+
+function addBaseMapLayer(map) {
+  const configured = !MAPBOX_STYLE_ID.includes('USERNAME') && !MAPBOX_STYLE_TOKEN.includes('YOUR_PUBLIC_TOKEN');
+  if (configured) {
+    L.tileLayer(
+      `https://api.mapbox.com/styles/v1/${MAPBOX_STYLE_ID}/tiles/{z}/{x}/{y}@2x?access_token=${MAPBOX_STYLE_TOKEN}`,
+      {
+        attribution: '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> '
+          + '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        tileSize: 512, zoomOffset: -1, maxZoom: 22,
+      }
+    ).addTo(map);
+  } else {
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+    }).addTo(map);
+  }
+}
+
 function initMap() {
   map = L.map('map', { zoomControl: true, doubleClickZoom: false }).setView([-33.4463, -70.6634], 15);
   map.invalidateSize();
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
-  }).addTo(map);
+  addBaseMapLayer(map);
   setTimeout(() => map.invalidateSize(), 0);
   window.addEventListener('resize', () => map.invalidateSize());
   setShape('rectangle'); // the toolbar shows rectangle as active by default -- actually arm it too
