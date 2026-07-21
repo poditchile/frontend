@@ -102,7 +102,7 @@
   .adjust-handle-corner{border-radius:2px;cursor:nwse-resize;}
   .adjust-handle-edge{border-radius:50%;cursor:move;}
   .adjust-confirm-btn{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;border:none;padding:11px 22px;border-radius:24px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.85rem;cursor:pointer;z-index:999;box-shadow:0 2px 10px rgba(0,0,0,0.2);display:none;}
-  .measure-label{background:#fff;border:1.5px solid #e33;color:#111;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.2);pointer-events:none;}
+  .measure-label{background:#fff;border:1.5px solid #e33;color:#111;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.2);pointer-events:none;display:inline-block;width:max-content;max-width:none;}
 
   /* ---------- Distribución tab ---------- */
   .layout-summary{padding:16px 22px;border-bottom:1px solid var(--line);}
@@ -1616,7 +1616,7 @@ const L = {
     marker.getLatLng = () => { const p = marker.getLngLat(); return { lat: p.lat, lng: p.lng }; };
     marker.setLatLng = (ll) => { marker.setLngLat([ll.lng, ll.lat]); return marker; };
     marker.setIcon = (icon) => {
-      el.className = icon.className || '';
+      el.className = `mapboxgl-marker ${icon.className || ''}`;
       el.innerHTML = icon.html || '';
       if (icon.iconSize) { el.style.width = icon.iconSize[0] + 'px'; el.style.height = icon.iconSize[1] + 'px'; }
     };
