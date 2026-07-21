@@ -98,6 +98,11 @@
   @keyframes spin{to{transform:rotate(360deg);}}
 
   .draw-hint{position:absolute;top:64px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:7px 14px;border-radius:20px;font-family:'IBM Plex Mono',monospace;font-size:0.74rem;color:var(--ink-soft);box-shadow:0 2px 8px rgba(0,0,0,0.06);z-index:999;pointer-events:none;}
+  .adjust-handle{background:#fff;border:2px solid var(--accent);border-radius:2px;box-shadow:0 1px 4px rgba(0,0,0,0.25);cursor:pointer;}
+  .adjust-handle-corner{border-radius:2px;cursor:nwse-resize;}
+  .adjust-handle-edge{border-radius:50%;cursor:move;}
+  .adjust-size-label{position:absolute;top:64px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:6px 14px;border-radius:20px;font-family:'IBM Plex Mono',monospace;font-size:0.78rem;font-weight:600;z-index:999;pointer-events:none;display:none;}
+  .adjust-confirm-btn{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;border:none;padding:11px 22px;border-radius:24px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.85rem;cursor:pointer;z-index:999;box-shadow:0 2px 10px rgba(0,0,0,0.2);display:none;}
 
   /* ---------- Distribución tab ---------- */
   .layout-summary{padding:16px 22px;border-bottom:1px solid var(--line);}
@@ -486,6 +491,8 @@
       <button type="button" class="draw-tool-btn" data-shape="polygon" data-i18n-title="tool_polygon" title="Polígono">⬠</button>
     </div>
     <div class="draw-hint" id="drawHint" data-i18n="hint_rect">Dibuja un rectángulo sobre el sitio que quieres modelar</div>
+    <div class="adjust-size-label" id="adjustSizeLabel"></div>
+    <button type="button" class="adjust-confirm-btn" id="adjustConfirmBtn" data-i18n="btn_confirm_selection">✓ CONFIRMAR SELECCIÓN</button>
   </div>
 
   <aside>
@@ -525,7 +532,7 @@
           <div class="area-bar-track"><div class="area-bar-fill" id="areaBarFill" style="width:0%;"></div></div>
           <div class="area-bar-legend">
             <span><span data-i18n="area_bar_free">Gratis hasta</span> <span id="areaBarFreeLabel">0,16</span> km²</span>
-            <span id="areaBarProLabel" data-i18n="area_bar_pro">Pro hasta 1,0 km²</span>
+            <span id="areaBarProLabel" data-i18n="area_bar_pro">Pro hasta 0,4 km²</span>
           </div>
         </div>
         <div class="error-box" id="areaWarning" style="display:none;margin-top:8px;"></div>
@@ -757,7 +764,7 @@ const I18N = {
     lbl_select_area: "01 — Sitio", h_select_area: "Selección del área",
     row_south: "Sur", row_north: "Norte", row_west: "Oeste", row_east: "Este", row_area: "Área seleccionada",
     btn_redraw: "Redibujar área", btn_clear: "✕ Limpiar selección",
-    area_bar_free: "Gratis hasta", area_bar_pro: "Pro hasta 1,0 km²",
+    area_bar_free: "Gratis hasta", area_bar_pro: "Pro hasta 0,4 km²",
     lbl_osm: "02 — Calles y edificios", h_osm: "Datos de OpenStreetMap",
     chk_streets: "Incluir calles con nombre", chk_buildings: "Incluir edificios de OSM",
     chk_flat_mode: "Solo placa base (sin cotas -- para sitios planos)",
@@ -804,6 +811,8 @@ const I18N = {
     hint_polygon: "Haz clic para agregar puntos. Cierra el polígono haciendo clic sobre el primer punto",
     hint_building: "Dibuja el contorno del edificio y ciérralo haciendo clic sobre el primer punto",
     hint_rect_close: "Mueve el mouse y haz clic para cerrar el rectángulo",
+    hint_adjust: "Arrastra las esquinas o los bordes para ajustar el área. Doble clic de nuevo para salir sin confirmar.",
+    btn_confirm_selection: "✓ CONFIRMAR SELECCIÓN",
     hint_circle_release: "Suelta el clic para fijar el radio",
     hint_circle_retry: "Mantén el clic presionado y arrastra para fijar el radio",
     hint_polygon_more: "Sigue haciendo clic para agregar puntos",
@@ -859,7 +868,7 @@ const I18N = {
     lbl_select_area: "01 — Site", h_select_area: "Area selection",
     row_south: "South", row_north: "North", row_west: "West", row_east: "East", row_area: "Selected area",
     btn_redraw: "Redraw area", btn_clear: "✕ Clear selection",
-    area_bar_free: "Free up to", area_bar_pro: "Pro up to 1.0 km²",
+    area_bar_free: "Free up to", area_bar_pro: "Pro up to 0.4 km²",
     lbl_osm: "02 — Streets and buildings", h_osm: "OpenStreetMap data",
     chk_streets: "Include named streets", chk_buildings: "Include OSM buildings",
     chk_flat_mode: "Base plate only (no elevation levels -- for flat sites)",
@@ -906,6 +915,8 @@ const I18N = {
     hint_polygon: "Click to add points. Close the polygon by clicking the first point",
     hint_building: "Draw the building outline and close it by clicking the first point",
     hint_rect_close: "Move the mouse and click to close the rectangle",
+    hint_adjust: "Drag the corners or edges to adjust the area. Double-click again to exit without confirming.",
+    btn_confirm_selection: "✓ CONFIRM SELECTION",
     hint_circle_release: "Release the click to set the radius",
     hint_circle_retry: "Hold the click down and drag to set the radius",
     hint_polygon_more: "Keep clicking to add points",
@@ -1084,7 +1095,7 @@ async function refreshAccountBadge() {
     if (resp.ok) {
       const profile = await resp.json();
       const isPro = profile.subscription_status === 'active' || profile.is_unlimited;
-      currentPlanLimits = { maxAreaM2: profile.is_unlimited ? 999000000 : (isPro ? 1000000 : 160000), isPro };
+      currentPlanLimits = { maxAreaM2: profile.is_unlimited ? 999000000 : (isPro ? 400000 : 160000), isPro };
       const used = profile.models_generated_this_month || 0;
       document.getElementById('accountMenuPlan').textContent = profile.is_unlimited
         ? 'CEO MAX UNLIMITED' : (isPro ? t('account_menu_pro', used) : t('account_menu_free', used));
@@ -1331,6 +1342,7 @@ function applyProjectParams(params) {
       const bounds = L.latLngBounds([currentBBox.south, currentBBox.west], [currentBBox.north, currentBBox.east]);
       if (finalLayer) map.removeLayer(finalLayer);
       finalLayer = L.rectangle(bounds, { color: '#1B3A5C', weight: 2, fillOpacity: 0.08 }).addTo(map);
+      if ((params.selectionShape || { type: 'rectangle' }).type === 'rectangle') wireRectangleAdjust(finalLayer);
       map.fitBounds(bounds);
       map.invalidateSize();
       const shape = params.selectionShape || { type: 'rectangle' };
@@ -1495,7 +1507,7 @@ function polygonAreaM2(latlngs) {
 }
 
 function updateAreaBar(areaM2) {
-  const freeKm2 = 0.16, proKm2 = 1.0;
+  const freeKm2 = 0.16, proKm2 = 0.4;
   const dec = currentLang === 'es' ? ',' : '.';
   document.getElementById('areaBarFreeLabel').textContent = freeKm2.toFixed(2).replace('.', dec);
   const maxKm2 = currentPlanLimits.isPro ? proKm2 : freeKm2;
@@ -1556,6 +1568,7 @@ function startDrawing() {
 }
 
 function setShape(shape) {
+  if (adjustMode) exitAdjustMode(false);
   currentShape = shape;
   document.querySelectorAll('.draw-tool-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === shape));
   points = [];
@@ -1579,6 +1592,7 @@ function setShape(shape) {
 function finishDrawing(bounds, shapeLayer, shapeType, shapeData, areaM2) {
   clearDrawingLayers();
   finalLayer = shapeLayer.addTo(map);
+  if (shapeType === 'rectangle') wireRectangleAdjust(finalLayer);
   setSelection(bounds, shapeType, shapeData, areaM2);
   drawing = false;
   points = [];
@@ -1590,6 +1604,135 @@ function distPx(map, a, b) {
   const pa = map.latLngToContainerPoint(a), pb = map.latLngToContainerPoint(b);
   return pa.distanceTo(pb);
 }
+
+// ---------------------------------------------------------------------
+// Manual adjustment of a rectangle selection: double-click the drawn
+// rectangle to enter adjust mode. 4 corner handles resize freely from
+// that corner (both width and height change); 4 edge handles change
+// ONLY the width or ONLY the height, independently. A live width x
+// height label follows the drag, and stays on screen (read-only) after
+// confirming -- "CONFIRMAR SELECCIÓN" locks it in and updates the actual
+// site selection used for generation.
+// ---------------------------------------------------------------------
+let adjustMode = false;
+let adjustHandles = [];   // Leaflet draggable markers: 4 corners + 4 edge midpoints
+let adjustBounds = null;  // L.LatLngBounds currently being edited
+
+function metersSize(bounds) {
+  const w = metersBetween(bounds.getSouth(), bounds.getWest(), bounds.getSouth(), bounds.getEast());
+  const h = metersBetween(bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getWest());
+  return { w, h };
+}
+
+function formatWH(bounds) {
+  const { w, h } = metersSize(bounds);
+  return `${w.toFixed(0)} x ${h.toFixed(0)} m`;
+}
+
+function updateAdjustSizeLabel() {
+  document.getElementById('adjustSizeLabel').textContent = formatWH(adjustBounds);
+}
+
+function adjustHandlePositions(bounds) {
+  const n = bounds.getNorth(), s = bounds.getSouth(), e = bounds.getEast(), w = bounds.getWest();
+  const midLat = (n + s) / 2, midLng = (e + w) / 2;
+  return {
+    nw: L.latLng(n, w), ne: L.latLng(n, e), se: L.latLng(s, e), sw: L.latLng(s, w),
+    n: L.latLng(n, midLng), s: L.latLng(s, midLng), e: L.latLng(midLat, e), w: L.latLng(midLat, w),
+  };
+}
+
+function makeAdjustHandleIcon(kind) {
+  const size = kind === 'corner' ? 12 : 10;
+  return L.divIcon({ className: `adjust-handle adjust-handle-${kind}`, iconSize: [size, size] });
+}
+
+function onAdjustHandleDrag(key, latlng) {
+  let n = adjustBounds.getNorth(), s = adjustBounds.getSouth(), e = adjustBounds.getEast(), w = adjustBounds.getWest();
+  if (key === 'nw') { n = latlng.lat; w = latlng.lng; }
+  else if (key === 'ne') { n = latlng.lat; e = latlng.lng; }
+  else if (key === 'se') { s = latlng.lat; e = latlng.lng; }
+  else if (key === 'sw') { s = latlng.lat; w = latlng.lng; }
+  else if (key === 'n') { n = latlng.lat; }
+  else if (key === 's') { s = latlng.lat; }
+  else if (key === 'e') { e = latlng.lng; }
+  else if (key === 'w') { w = latlng.lng; }
+
+  // Keep a sane rectangle (north above south, east right of west) --
+  // clamp instead of letting it flip inside-out under the cursor.
+  const minGap = 0.00002;
+  if (n - s < minGap) { if (key === 's') s = n - minGap; else n = s + minGap; }
+  if (e - w < minGap) { if (key === 'w') w = e - minGap; else e = w + minGap; }
+
+  adjustBounds = L.latLngBounds(L.latLng(s, w), L.latLng(n, e));
+  finalLayer.setBounds(adjustBounds);
+
+  const positions = adjustHandlePositions(adjustBounds);
+  adjustHandles.forEach(m => { if (m._handleKey !== key) m.setLatLng(positions[m._handleKey]); });
+  updateAdjustSizeLabel();
+}
+
+function enterAdjustMode() {
+  if (!finalLayer || currentShape !== 'rectangle' || !currentBBox || adjustMode) return;
+  adjustMode = true;
+  adjustBounds = L.latLngBounds(
+    L.latLng(currentBBox.south, currentBBox.west), L.latLng(currentBBox.north, currentBBox.east));
+  finalLayer.setStyle({ dashArray: '6 4' });
+  drawing = false;
+  document.getElementById('drawHint').textContent = t('hint_adjust');
+  document.getElementById('drawHint').style.display = 'block';
+  document.querySelectorAll('.draw-tool-btn').forEach(b => b.classList.remove('active'));
+
+  const positions = adjustHandlePositions(adjustBounds);
+  adjustHandles = [];
+  ['nw', 'ne', 'se', 'sw'].forEach(key => {
+    const marker = L.marker(positions[key], { draggable: true, icon: makeAdjustHandleIcon('corner'), zIndexOffset: 1000 }).addTo(map);
+    marker._handleKey = key;
+    marker.on('drag', () => onAdjustHandleDrag(key, marker.getLatLng()));
+    adjustHandles.push(marker);
+  });
+  ['n', 's', 'e', 'w'].forEach(key => {
+    const marker = L.marker(positions[key], { draggable: true, icon: makeAdjustHandleIcon('edge'), zIndexOffset: 1000 }).addTo(map);
+    marker._handleKey = key;
+    marker.on('drag', () => onAdjustHandleDrag(key, marker.getLatLng()));
+    adjustHandles.push(marker);
+  });
+
+  document.getElementById('adjustSizeLabel').style.display = 'block';
+  updateAdjustSizeLabel();
+  document.getElementById('adjustConfirmBtn').style.display = 'block';
+}
+
+function exitAdjustMode(confirm) {
+  if (!adjustMode) return;
+  adjustHandles.forEach(m => map.removeLayer(m));
+  adjustHandles = [];
+  finalLayer.setStyle({ dashArray: null });
+  document.getElementById('adjustConfirmBtn').style.display = 'none';
+  document.getElementById('drawHint').style.display = 'none';
+  adjustMode = false;
+
+  if (confirm) {
+    const { w, h } = metersSize(adjustBounds);
+    setSelection(adjustBounds, 'rectangle', { type: 'rectangle' }, w * h);
+    // Keep the measurement on screen (read-only) after confirming, as requested.
+    document.getElementById('adjustSizeLabel').textContent = formatWH(adjustBounds);
+    document.getElementById('adjustSizeLabel').style.display = 'block';
+  } else {
+    finalLayer.setBounds(L.latLngBounds(
+      L.latLng(currentBBox.south, currentBBox.west), L.latLng(currentBBox.north, currentBBox.east)));
+    document.getElementById('adjustSizeLabel').style.display = 'none';
+  }
+}
+
+function wireRectangleAdjust(layer) {
+  layer.on('dblclick', (e) => {
+    L.DomEvent.stopPropagation(e);
+    if (adjustMode) { exitAdjustMode(false); } else { enterAdjustMode(); }
+  });
+}
+
+document.getElementById('adjustConfirmBtn').addEventListener('click', () => exitAdjustMode(true));
 
 function initMap() {
   map = L.map('map', { zoomControl: true, doubleClickZoom: false }).setView([-33.4463, -70.6634], 15);
