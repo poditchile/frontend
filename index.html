@@ -546,15 +546,9 @@
         <h2 data-i18n="h_osm">Datos de OpenStreetMap</h2>
         <p class="hint" data-i18n="hint_osm">Se incluyen automáticamente según el formato de salida que elijas abajo.</p>
 
-        <div class="field row2">
-          <div>
-            <label for="defaultBuildingHeightM" data-i18n="lbl_default_height">Altura por defecto si OSM no la tiene (m)</label>
-            <input type="number" id="defaultBuildingHeightM" value="6" min="1" step="0.5">
-          </div>
-          <div>
-            <label for="labelTextHeightM" data-i18n="lbl_label_height">Altura de letra en calles (m reales)</label>
-            <input type="number" id="labelTextHeightM" value="2" min="0.5" step="0.5">
-          </div>
+        <div class="field">
+          <label for="defaultBuildingHeightM" data-i18n="lbl_default_height">Altura por defecto si OSM no la tiene (m)</label>
+          <input type="number" id="defaultBuildingHeightM" value="6" min="1" step="0.5">
         </div>
 
         <div id="stlStreetFields" style="display:none;">
@@ -646,12 +640,13 @@
             <option value="1.5">1.5 mm</option>
             <option value="2">2 mm</option>
             <option value="3" selected>3 mm</option>
+            <option value="custom" data-i18n="opt_custom">Personalizado</option>
           </select>
+          <input type="number" id="thicknessCustom" placeholder="Ej: 4.5" min="0.1" step="0.1" style="margin-top:6px;display:none;">
         </div>
       </div>
 
       <div class="side-section" style="flex:0;">
-        <button class="ghost-btn" id="previewBtn" disabled style="margin-bottom:8px;">👁 Vista previa (gratis)</button>
         <button class="cta" id="generateBtn" disabled>
           <svg class="btn-spinner" viewBox="0 0 50 50" fill="none">
             <circle cx="25" cy="25" r="20" stroke="rgba(255,255,255,0.35)" stroke-width="5"/>
@@ -1217,12 +1212,11 @@ function collectCurrentParams() {
     scaleCustom: document.getElementById('scaleCustom').value,
     sheetW: document.getElementById('sheetW').value,
     sheetH: document.getElementById('sheetH').value,
-    thickness: document.getElementById('thickness').value,
+    thickness: getThicknessMm(),
     outputFormat,
     outputSubMode,
     
     defaultBuildingHeightM: document.getElementById('defaultBuildingHeightM').value,
-    labelTextHeightM: document.getElementById('labelTextHeightM').value,
     streetWidthM: document.getElementById('streetWidthM').value,
     streetRaiseMm: document.getElementById('streetRaiseMm').value,
     manualBuildings,
@@ -1312,10 +1306,19 @@ function applyProjectParams(params) {
     if (params.scaleCustom) document.getElementById('scaleCustom').value = params.scaleCustom;
     if (params.sheetW) document.getElementById('sheetW').value = params.sheetW;
     if (params.sheetH) document.getElementById('sheetH').value = params.sheetH;
-    if (params.thickness) document.getElementById('thickness').value = params.thickness;
+    if (params.thickness) {
+      const isPreset = [...thicknessSelect.options].some(o => o.value === String(params.thickness));
+      if (isPreset) {
+        thicknessSelect.value = params.thickness;
+        thicknessCustom.style.display = 'none';
+      } else {
+        thicknessSelect.value = 'custom';
+        thicknessCustom.value = params.thickness;
+        thicknessCustom.style.display = 'block';
+      }
+    }
     
     if (params.defaultBuildingHeightM) document.getElementById('defaultBuildingHeightM').value = params.defaultBuildingHeightM;
-    if (params.labelTextHeightM) document.getElementById('labelTextHeightM').value = params.labelTextHeightM;
     if (params.streetWidthM) document.getElementById('streetWidthM').value = params.streetWidthM;
     if (params.streetRaiseMm) document.getElementById('streetRaiseMm').value = params.streetRaiseMm;
     if (params.outputSubMode) {
@@ -1341,14 +1344,21 @@ function applyProjectParams(params) {
       const bounds = L.latLngBounds(L.latLng(currentBBox.south, currentBBox.west), L.latLng(currentBBox.north, currentBBox.east));
       if (finalLayer) removeMapLayer(finalLayer);
       clearAllMeasureLabels();
-      finalLayer = L.rectangle(bounds, { color: '#1B3A5C', weight: 2, fillOpacity: 0.08 }).addTo(map);
-      if ((params.selectionShape || { type: 'rectangle' }).type === 'rectangle') {
-        wireRectangleAdjust(finalLayer);
-        updateRectMeasureLabels(bounds);
+      const shape = params.selectionShape || { type: 'rectangle' };
+      if (shape.type === 'circle' && shape.radius_m) {
+        const center = L.latLng(shape.center_lat, shape.center_lon);
+        finalLayer = L.circle(center, { radius: shape.radius_m, color: '#1B3A5C', weight: 2, fillOpacity: 0.08 }).addTo(map);
+        wireCircleAdjust(finalLayer);
+        updateCircleMeasureLabel(center, shape.radius_m, finalLayer);
+      } else {
+        finalLayer = L.rectangle(bounds, { color: '#1B3A5C', weight: 2, fillOpacity: 0.08 }).addTo(map);
+        if (shape.type === 'rectangle') {
+          wireRectangleAdjust(finalLayer);
+          updateRectMeasureLabels(bounds);
+        }
       }
       map.fitBounds(toGLBounds(bounds));
       map.resize();
-      const shape = params.selectionShape || { type: 'rectangle' };
       const area = params.areaM2 || (
         metersBetween(currentBBox.south, currentBBox.west, currentBBox.south, currentBBox.east) *
         metersBetween(currentBBox.south, currentBBox.west, currentBBox.north, currentBBox.west)
@@ -1532,6 +1542,15 @@ function rectRingGeometry(bounds) {
   return { type: 'Polygon', coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]] };
 }
 
+function circleRingCoords(center, radiusM, steps = 64) {
+  const ring = [];
+  for (let i = 0; i <= steps; i++) {
+    const p = llDestination(center.lat, center.lng, radiusM, (360 / steps) * i);
+    ring.push([p.lng, p.lat]);
+  }
+  return ring;
+}
+
 class GLShapeLayer {
   constructor(geometry, style, geomType) {
     this._id = 'shp' + (_shapeSeq++);
@@ -1578,6 +1597,7 @@ class GLShapeLayer {
     }
   }
   setBounds(bounds) { this._setGeometry(rectRingGeometry(bounds)); }
+  setCircle(center, radiusM) { this._setGeometry({ type: 'Polygon', coordinates: [circleRingCoords(center, radiusM)] }); }
   setStyle(style) {
     if (!this._map) return;
     if ('dashArray' in style) {
@@ -1624,12 +1644,7 @@ const L = {
   },
   rectangle(bounds, style) { return new GLShapeLayer(rectRingGeometry(bounds), style, 'Polygon'); },
   circle(center, opts) {
-    const steps = 64, ring = [];
-    for (let i = 0; i <= steps; i++) {
-      const p = llDestination(center.lat, center.lng, opts.radius, (360 / steps) * i);
-      ring.push([p.lng, p.lat]);
-    }
-    return new GLShapeLayer({ type: 'Polygon', coordinates: [ring] }, opts, 'Polygon');
+    return new GLShapeLayer({ type: 'Polygon', coordinates: [circleRingCoords(center, opts.radius)] }, opts, 'Polygon');
   },
   polygon(points, style) {
     const ring = points.map(p => [p.lng, p.lat]);
@@ -1723,6 +1738,7 @@ function startDrawing() {
 
 function setShape(shape) {
   if (adjustMode) exitAdjustMode(false);
+  if (circleAdjustMode) exitCircleAdjustMode(false);
   currentShape = shape;
   document.querySelectorAll('.draw-tool-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === shape));
   points = [];
@@ -1748,6 +1764,7 @@ function finishDrawing(bounds, shapeLayer, shapeType, shapeData, areaM2) {
   clearDrawingLayers();
   finalLayer = shapeLayer.addTo(map);
   if (shapeType === 'rectangle') wireRectangleAdjust(finalLayer);
+  if (shapeType === 'circle') wireCircleAdjust(finalLayer);
   setSelection(bounds, shapeType, shapeData, areaM2);
   drawing = false;
   points = [];
@@ -1814,13 +1831,22 @@ function clearAllMeasureLabels() {
 function updateRectMeasureLabels(bounds) {
   const { w, h } = metersSize(bounds);
   const n = bounds.getNorth(), s = bounds.getSouth(), e = bounds.getEast(), west = bounds.getWest();
-  setMeasureLabel('w', L.latLng(n, (e + west) / 2), fmtMeters(w));
-  setMeasureLabel('h', L.latLng((n + s) / 2, west), fmtMeters(h));
+  const midLng = (e + west) / 2, midLat = (n + s) / 2;
+  // A little OUTSIDE the shape's own edge, not sitting right on top of the
+  // line -- proportional to the shape's own size so it looks right at any
+  // scale, with a small floor so tiny selections don't get a label right
+  // on top of the corner handles either.
+  const offsetM = Math.max(h * 0.08, 8);
+  const wPos = llDestination(n, midLng, offsetM, 0);      // pushed further north, past the top edge
+  const hPos = llDestination(midLat, west, Math.max(w * 0.08, 8), 270);  // pushed further west, past the left edge
+  setMeasureLabel('w', L.latLng(wPos.lat, wPos.lng), fmtMeters(w));
+  setMeasureLabel('h', L.latLng(hPos.lat, hPos.lng), fmtMeters(h));
 }
 
 function updateCircleMeasureLabel(center, radius, circleLayer) {
   const eastEdge = circleLayer.getBounds().getEast();
-  setMeasureLabel('d', L.latLng(center.lat, eastEdge), fmtMeters(radius * 2));
+  const pos = llDestination(center.lat, eastEdge, Math.max(radius * 0.08, 8), 90);  // pushed further east, past the edge
+  setMeasureLabel('d', L.latLng(pos.lat, pos.lng), fmtMeters(radius * 2));
 }
 
 function adjustHandlePositions(bounds) {
@@ -1921,7 +1947,74 @@ function wireRectangleAdjust(layer) {
   });
 }
 
-document.getElementById('adjustConfirmBtn').addEventListener('click', () => exitAdjustMode(true));
+// ---------------------------------------------------------------------
+// Same idea as the rectangle adjust mode above, but for a circle: a
+// single draggable handle on the edge (east point) changes the radius.
+// ---------------------------------------------------------------------
+let circleAdjustMode = false;
+let circleAdjustHandle = null;
+let circleAdjustCenter = null;
+let circleAdjustRadius = null;
+
+function enterCircleAdjustMode() {
+  if (!finalLayer || currentShape !== 'circle' || !currentSelectionShape || circleAdjustMode || adjustMode) return;
+  circleAdjustMode = true;
+  circleAdjustCenter = L.latLng(currentSelectionShape.center_lat, currentSelectionShape.center_lon);
+  circleAdjustRadius = currentSelectionShape.radius_m;
+  finalLayer.setStyle({ dashArray: '6 4' });
+  drawing = false;
+  document.getElementById('drawHint').textContent = t('hint_adjust');
+  document.getElementById('drawHint').style.display = 'block';
+  document.querySelectorAll('.draw-tool-btn').forEach(b => b.classList.remove('active'));
+
+  const eastPoint = L.latLng(circleAdjustCenter.lat, finalLayer.getBounds().getEast());
+  circleAdjustHandle = L.marker(eastPoint, { draggable: true, icon: makeAdjustHandleIcon('edge'), zIndexOffset: 1000 }).addTo(map);
+  circleAdjustHandle.on('drag', () => {
+    const latlng = circleAdjustHandle.getLatLng();
+    circleAdjustRadius = Math.max(1, metersBetween(circleAdjustCenter.lat, circleAdjustCenter.lng, latlng.lat, latlng.lng));
+    finalLayer.setCircle(circleAdjustCenter, circleAdjustRadius);
+    updateCircleMeasureLabel(circleAdjustCenter, circleAdjustRadius, finalLayer);
+  });
+
+  document.getElementById('adjustConfirmBtn').style.display = 'block';
+  updateCircleMeasureLabel(circleAdjustCenter, circleAdjustRadius, finalLayer);
+}
+
+function exitCircleAdjustMode(confirm) {
+  if (!circleAdjustMode) return;
+  removeMapLayer(circleAdjustHandle);
+  circleAdjustHandle = null;
+  finalLayer.setStyle({ dashArray: null });
+  document.getElementById('adjustConfirmBtn').style.display = 'none';
+  document.getElementById('drawHint').style.display = 'none';
+  circleAdjustMode = false;
+
+  if (confirm) {
+    const area = Math.PI * circleAdjustRadius * circleAdjustRadius;
+    const fetchBounds = boundsAroundCenter(circleAdjustCenter, circleAdjustRadius * 2 * 1.15);
+    setSelection(fetchBounds, 'circle', {
+      type: 'circle', center_lat: circleAdjustCenter.lat, center_lon: circleAdjustCenter.lng, radius_m: circleAdjustRadius,
+    }, area);
+    updateCircleMeasureLabel(circleAdjustCenter, circleAdjustRadius, finalLayer);
+  } else {
+    const origCenter = L.latLng(currentSelectionShape.center_lat, currentSelectionShape.center_lon);
+    const origRadius = currentSelectionShape.radius_m;
+    finalLayer.setCircle(origCenter, origRadius);
+    updateCircleMeasureLabel(origCenter, origRadius, finalLayer);
+  }
+}
+
+function wireCircleAdjust(layer) {
+  layer.on('dblclick', (e) => {
+    L.DomEvent.stopPropagation(e);
+    if (circleAdjustMode) { exitCircleAdjustMode(false); } else { enterCircleAdjustMode(); }
+  });
+}
+
+document.getElementById('adjustConfirmBtn').addEventListener('click', () => {
+  if (adjustMode) exitAdjustMode(true);
+  if (circleAdjustMode) exitCircleAdjustMode(true);
+});
 
 // --- Base map style -------------------------------------------------------
 // To use one of Mapbox's own map styles (e.g. a style you customized or
@@ -2177,19 +2270,28 @@ function getScaleDenominator() {
   return parseInt(scaleSelect.value, 10);
 }
 
+const thicknessSelect = document.getElementById('thickness');
+const thicknessCustom = document.getElementById('thicknessCustom');
+thicknessSelect.addEventListener('change', () => {
+  thicknessCustom.style.display = thicknessSelect.value === 'custom' ? 'block' : 'none';
+});
+function getThicknessMm() {
+  if (thicknessSelect.value === 'custom') return parseFloat(thicknessCustom.value) || 3;
+  return parseFloat(thicknessSelect.value);
+}
+
 function refreshGenerateButton() {
   const btn = document.getElementById('generateBtn');
   const label = document.getElementById('btnLabel');
-  const pbtn = document.getElementById('previewBtn');
   if (btn.classList.contains('loading')) return; // don't override the spinner state
   if (currentBBox && currentAreaM2 > currentPlanLimits.maxAreaM2) {
-    btn.disabled = true; pbtn.disabled = true;
+    btn.disabled = true;
     label.textContent = t('btn_area_too_big');
   } else if (currentBBox) {
-    btn.disabled = false; pbtn.disabled = false;
+    btn.disabled = false;
     label.textContent = outputFormat === "dxf" ? t('btn_generate_dxf') : t('btn_generate_stl');
   } else {
-    btn.disabled = true; pbtn.disabled = true;
+    btn.disabled = true;
     label.textContent = t('btn_draw_first');
   }
 }
@@ -2319,7 +2421,7 @@ async function handleGenerate() {
     include_buildings: wantsStreetsBuildings(outputSubMode),
     manual_buildings: manualBuildings,
     default_building_height_m: parseFloat(document.getElementById('defaultBuildingHeightM').value),
-    label_text_real_height_m: parseFloat(document.getElementById('labelTextHeightM').value),
+    label_text_real_height_m: 2.0,  // fixed default -- the manual field for this was removed from the UI
   };
 
   try {
@@ -2351,7 +2453,7 @@ async function handleGenerate() {
         ...commonFields,
         sheet_width_mm: parseFloat(document.getElementById('sheetW').value),
         sheet_height_mm: parseFloat(document.getElementById('sheetH').value),
-        material_thickness_mm: parseFloat(document.getElementById('thickness').value),
+        material_thickness_mm: getThicknessMm(),
         assembly_mode: ASSEMBLY_MODE,
         output_mode: outputSubMode.replace('dxf_', ''),
       };
@@ -2553,72 +2655,6 @@ async function handleRegenerateStl() {
 }
 
 document.getElementById('generateBtn').onclick = handleGenerate;
-document.getElementById('previewBtn').onclick = handlePreviewOnly;
-
-async function handlePreviewOnly() {
-  if (!currentBBox) return;
-  clearError();
-  const btn = document.getElementById('previewBtn');
-  btn.disabled = true;
-  const oldText = btn.textContent;
-  btn.textContent = currentLang === 'es' ? 'Cargando…' : 'Loading…';
-  try {
-    const scaleDenominator = getScaleDenominator();
-    const commonFields = {
-      south: currentBBox.south, west: currentBBox.west, north: currentBBox.north, east: currentBBox.east,
-      selection_shape: currentSelectionShape, scale_denominator: scaleDenominator,
-      include_streets: wantsStreetsBuildings(outputSubMode),
-      include_buildings: wantsStreetsBuildings(outputSubMode),
-      manual_buildings: manualBuildings,
-      default_building_height_m: parseFloat(document.getElementById('defaultBuildingHeightM').value),
-      label_text_real_height_m: parseFloat(document.getElementById('labelTextHeightM').value),
-    };
-    document.getElementById('layoutEmpty').style.display = 'none';
-    const content = document.getElementById('layoutContent');
-    content.style.display = 'block';
-
-    if (outputFormat === 'stl') {
-      const payload = {
-        ...commonFields,
-        bed_width_mm: parseFloat(document.getElementById('sheetW').value),
-        bed_height_mm: parseFloat(document.getElementById('sheetH').value),
-        street_width_m: parseFloat(document.getElementById('streetWidthM').value),
-        street_raise_mm: parseFloat(document.getElementById('streetRaiseMm').value),
-        stl_mode: outputSubMode.replace('stl_', ''),
-      };
-      const resp = await postJSON('/preview-stl', payload);
-      const zipBlob = await resp.blob();
-      const zip = await JSZip.loadAsync(zipBlob);
-      const fileName = zip.file('terreno_completo.stl') ? 'terreno_completo.stl' : 'terreno_solo.stl';
-      const buf = await zip.file(fileName).async('arraybuffer');
-      const positions = parseBinarySTL(buf);
-      content.innerHTML = `<p class="hint" style="margin-bottom:8px;">${currentLang === 'es' ? 'Vista previa -- arrastra para rotar. No descargó ningún archivo.' : 'Preview -- drag to rotate. No file was downloaded.'}</p><div id="stlViewerBox"></div>`;
-      renderSTLViewer(document.getElementById('stlViewerBox'), positions);
-    } else {
-      const dxfPayload = {
-        ...commonFields,
-        sheet_width_mm: parseFloat(document.getElementById('sheetW').value),
-        sheet_height_mm: parseFloat(document.getElementById('sheetH').value),
-        material_thickness_mm: parseFloat(document.getElementById('thickness').value),
-        assembly_mode: ASSEMBLY_MODE,
-        output_mode: outputSubMode.replace('dxf_', ''),
-      };
-      const resp = await postJSON('/preview', dxfPayload);
-      const previewData = await resp.json();
-      renderLayoutTab(previewData, null);
-      const dl = document.getElementById('dlBtn');
-      if (dl) { dl.style.display = 'none'; }
-      content.insertAdjacentHTML('afterbegin', `<p class="hint" style="margin-bottom:8px;">${currentLang === 'es' ? 'Vista previa -- no descargó ningún archivo.' : 'Preview -- no file was downloaded.'}</p>`);
-    }
-    switchTab('layout');
-  } catch (e) {
-    const msg = (e instanceof TypeError) ? t('err_no_backend', API_BASE) : e.message;
-    showError(msg);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = oldText;
-  }
-}
 
 setOutputMode('dxf_full');
 onAuthReady();
